@@ -1,0 +1,6 @@
+D:\Visual Studio 2022 projects\ScannerGUI2\ScannerGUI2\x64\Debug\ScannerGUI2.vcxproj.AssemblyReference.cache
+D:\Visual Studio 2022 projects\ScannerGUI2\ScannerGUI2\x64\Debug\ScannerGUI2.MyForm.resources
+D:\Visual Studio 2022 projects\ScannerGUI2\ScannerGUI2\x64\Debug\ScannerGUI2.vcxproj.GenerateResource.cache
+D:\Compilers\C_compiler\ScannerGUI2\ScannerGUI2\x64\Debug\ScannerGUI2.vcxproj.AssemblyReference.cache
+D:\Compilers\C_compiler\ScannerGUI2\ScannerGUI2\x64\Debug\ScannerGUI2.MyForm.resources
+D:\Compilers\C_compiler\ScannerGUI2\ScannerGUI2\x64\Debug\ScannerGUI2.vcxproj.GenerateResource.cache
