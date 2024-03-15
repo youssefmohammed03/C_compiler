@@ -332,25 +332,45 @@ namespace ScannerGUI2 {
             this->PerformLayout();
 
         }
-#pragma endregion
-	private: System::Void updateDictionbutton_Click(System::Object^ sender, System::EventArgs^ e) {
-		OpenFileDialog^ openFileDialog = gcnew OpenFileDialog();
-		openFileDialog->Filter = "Text files|*.txt|All files (*.*)|*.*";
-		openFileDialog->FilterIndex = 1;
-		openFileDialog->RestoreDirectory = true;
+    #pragma endregion
+    private: System::Void updateDictionbutton_Click(System::Object^ sender, System::EventArgs^ e) {
+        OpenFileDialog^ openFileDialog = gcnew OpenFileDialog();
+        openFileDialog->Filter = "Text files|*.txt|All files (*.*)|*.*";
+        openFileDialog->FilterIndex = 1;
+        openFileDialog->RestoreDirectory = true;
 
-		if (openFileDialog->ShowDialog() == System::Windows::Forms::DialogResult::OK)
-		{
-			String^ filePath = openFileDialog->FileName;
-			//errorEmpty->Text = "Selected File: " + filePath;
+        if (openFileDialog->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+        {
+            String^ filePath = openFileDialog->FileName;
 
-			// Convert System::String^ to std::string and update the file path
-			std::string filePathStd = msclr::interop::marshal_as<std::string>(filePath);
+            // Convert System::String^ to std::string and update the file path
+            std::string filePathStd = msclr::interop::marshal_as<std::string>(filePath);
+
+            // Read the content of the file and store it into a variable named sourceCode
             std::ifstream input(filePathStd);
-            //map<string, string> lexicalResults = performLexicalAnalysis(sourceCode);
+            std::string line;
+            std::string sourceCode;
+            while (std::getline(input, line))
+            {
+                sourceCode += line + "\n"; // Concatenate each line with a newline character
+            }
 
-		}
-	}
+            // Now, sourceCode contains the content of the selected file
+            map<string, string> lexicalResults = performLexicalAnalysis(sourceCode);
+            std::ostringstream formattedResult;
+            formattedResult << std::left << std::setw(20) << "Lexeme" << "Token" << std::endl;
+            formattedResult << std::setfill('-') << std::setw(40) << "-" << std::setfill(' ') << std::endl;
+            for (const auto& pair : lexicalResults) {
+                formattedResult << std::left << std::setw(20) << pair.first << pair.second << std::endl;
+            }
+
+            // Convert the formatted result to System::String
+            String^ resultString = gcnew String(formattedResult.str().c_str());
+
+            // Display the result in label3
+            label3->Text = resultString;
+        }
+    }
     private: System::Void textBox1_TextChanged(System::Object^ sender, System::EventArgs^ e) {
 
        
