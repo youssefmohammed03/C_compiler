@@ -1,22 +1,18 @@
 #include <iostream>
 #include <regex>
 #include <string>
+#include <map>
+#include <vector>
 using namespace std;
 
-vector<string> keywords;
-vector<string> dataTypes;
-vector<string> arithExpressions;
-vector<string> boolExpressions;
-vector<string> assignmentStatements;
-vector<string> punctuations;
-vector<string> errors;
+vector<string> lexemes;
 
 regex keywordPattern("\\b(alignas|alignof|auto|bool|break|case|const|constexpr|continue|default|do|else|enum|extern|false|for|goto|if|inline|register|restrict|return|signed|sizeof|static|static_assert|struct|switch|thread_local|true|typedef|typeof|typeof_unqual|union|unsigned|void|volatile|while|_Alignas|_Alignof|_Atomic|_Bool|_Complex|_Decimal128|_Decimal32|_Decimal64|_Generic|_Imaginary|_Noreturn|_Static_assert|_Thread_local)\\b");
 regex dataTypePattern("\\b(char|double|float|int|long|short|signed|unsigned|void)\\b");
 regex arithPattern("(\\+\\+|\\-\\-|\\+|\\-|\\*|\\/|\\%|\\~|\\<\\<|\\>\\>|\\^|([^\\&]|^)\\&([^\\&]|$)|([^\\|]|^)\\|([^\\|]|$))");
 regex boolPattern("(\\=\\=|\\!\\=|\\<\\=|\\>\\=|([^\\>]|^)\\>([^\\>]|$)|([^\\<]|^)\\<([^\\<]|$)|\\!|\\&\\&|\\|\\|)");
 regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
-regex punctuationPattern(R"([{}()\[\];,.<>:])");
+regex punctuationPattern(R"([{}()\[\];,.:])");
 
 string removeComments(string code) {
     
@@ -42,59 +38,111 @@ string extractPreprocessors(string code) {
     return result;
 }
 
-void processToken(const string& temp) {
-    if (regex_match(temp, keywordPattern)) {
-        keywords.push_back(temp);
-    } else if (regex_match(temp, dataTypePattern)) {
-        dataTypes.push_back(temp);
-    } else if (regex_match(temp, arithPattern)) {
-        arithExpressions.push_back(temp);
-    } else if (regex_match(temp, boolPattern)) {
-        boolExpressions.push_back(temp);
-    } else if (regex_match(temp, assignmentPattern)) {
-        assignmentStatements.push_back(temp);
-    } else if (regex_match(temp, punctuationPattern)) {
-        punctuations.push_back(temp);
-    } else {
-        errors.push_back(temp);
+void punctuationDetector(const string& temp, map<string, string>& tokens) {
+    if(temp == "{"){
+        tokens.insert(make_pair(temp, "start curly bracket"));
+    } else if(temp == "}"){
+        tokens.insert(make_pair(temp, "end curly bracket"));
+    } else if(temp == "("){
+        tokens.insert(make_pair(temp, "start parenthesis"));
+    } else if(temp == ")"){
+        tokens.insert(make_pair(temp, "end parenthesis"));
+    } else if(temp == "["){
+        tokens.insert(make_pair(temp, "start square bracket"));
+    } else if(temp == "]"){
+        tokens.insert(make_pair(temp, "end square bracket"));
+    } else if(temp == ";"){
+        tokens.insert(make_pair(temp, "semicolon"));
+    } else if(temp == ","){
+        tokens.insert(make_pair(temp, "comma"));
+    } else if(temp == "."){
+        tokens.insert(make_pair(temp, "dot"));
+    } else if(temp == ":"){
+        tokens.insert(make_pair(temp, "colon"));
     }
-    cout << temp << endl; // Print temp
 }
 
-void analyzeCode(const string& code) {
-    string separators = "(){}[].,;+-*/%~<>^&|!=:";
+void processToken(const string& temp, map<string, string>& tokens) {
+    if (regex_match(temp, keywordPattern)) {
+        tokens.insert(make_pair(temp, "keyword"));
+    } else if (regex_match(temp, dataTypePattern)) {
+        tokens.insert(make_pair(temp, "data type"));
+    } else if (regex_match(temp, arithPattern)) {
+        tokens.insert(make_pair(temp, "arithmetic expression"));
+    } else if (regex_match(temp, boolPattern)) {
+        tokens.insert(make_pair(temp, "boolean expression"));
+    } else if (regex_match(temp, assignmentPattern)) {
+        tokens.insert(make_pair(temp, "assignment statement"));
+    } else if (regex_match(temp, punctuationPattern)) {
+        punctuationDetector(temp, tokens);
+    } else {
+        tokens.insert(make_pair(temp, "identifier"));
+    }
+    lexemes.push_back(temp);
+}
+
+void twoCharOps(string& temp, const string& code, int& i) {
+    string multiCharOp;
+    string twoCharOps[] = {"||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^="};
+    string threeCharOps[] = {"<<=", ">>="};
+
+    if (i + 1 < code.size()) {
+        multiCharOp = temp + code[i + 1];
+        if (find(begin(twoCharOps), end(twoCharOps), multiCharOp) != end(twoCharOps)) {
+            temp = multiCharOp;
+            ++i;
+            if (i + 1 < code.size()) {
+                multiCharOp = temp + code[i + 1];
+                if (find(begin(threeCharOps), end(threeCharOps), multiCharOp) != end(threeCharOps)) {
+                    temp = multiCharOp;
+                    ++i;
+                }
+            }
+        }
+    }
+}
+
+map<string, string> analyzeCode(const string& code) {
+    map<string, string> tokens;
+    string separators = "(){}[].,;+-*/%~<>^&|!=:\"\'";
     string temp;
     for (int i = 0; i < code.size(); ++i) {
         char c = code[i];
         if (separators.find(c) != string::npos) {
             if (!temp.empty()) {
-                processToken(temp);
+                processToken(temp, tokens);
                 temp.clear();
             }
             temp += c;
-            string multiCharOp;
-            string twoCharOps[] = {"||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^="};
-            string threeCharOps[] = {"<<=", ">>="};
-
-            if (i + 1 < code.size()) {
-                multiCharOp = temp + code[i + 1];
-                if (find(begin(twoCharOps), end(twoCharOps), multiCharOp) != end(twoCharOps)) {
-                    temp = multiCharOp;
-                    ++i;
-                    if (i + 1 < code.size()) {
-                        multiCharOp = temp + code[i + 1];
-                        if (find(begin(threeCharOps), end(threeCharOps), multiCharOp) != end(threeCharOps)) {
-                            temp = multiCharOp;
-                            ++i;
-                        }
-                    }
+            if(c == '\"'){
+                int j = i + 1;
+                while (j < code.size() && code[j] != '\"') {
+                    temp += code[j++];
                 }
+                if (j < code.size()) {
+                    temp += code[j++];
+                }
+                i = j - 1;
+                tokens.insert(make_pair(temp, "string"));
+            } else if(c == '\''){
+                int j = i + 1;
+                while (j < code.size() && code[j] != '\'') {
+                    temp += code[j++];
+                }
+                if (j < code.size()) {
+                    temp += code[j++];
+                }
+                i = j - 1;
+                tokens.insert(make_pair(temp, "character"));
+            } else{
+                twoCharOps(temp, code, i);
+                processToken(temp, tokens);
+
             }
-            processToken(temp);
             temp.clear();
         } else if (c == ' ') {
             if (!temp.empty()) {
-                processToken(temp);
+                processToken(temp, tokens);
                 temp.clear();
             }
         } else {
@@ -102,89 +150,80 @@ void analyzeCode(const string& code) {
         }
     }
 
-    // Handle the last token if it's not empty
     if (!temp.empty()) {
-        processToken(temp);
+        processToken(temp, tokens);
     }
 
-    // Print the vectors
-    cout << "Keywords:\n";
-    for (const auto& keyword : keywords) {
-        cout << keyword << "\n";
-    }
-
-    cout << "\nData Types:\n";
-    for (const auto& dataType : dataTypes) {
-        cout << dataType << "\n";
-    }
-
-    cout << "\nArithmetic Expressions:\n";
-    for (const auto& expr : arithExpressions) {
-        cout << expr << "\n";
-    }
-
-    cout << "\nBoolean Expressions:\n";
-    for (const auto& expr : boolExpressions) {
-        cout << expr << "\n";
-    }
-
-    cout << "\nAssignment Statements:\n";
-    for (const auto& stmt : assignmentStatements) {
-        cout << stmt << "\n";
-    }
-
-    cout << "\nPunctuations:\n";
-    for (const auto& punc : punctuations) {
-        cout << punc << "\n";
-    }
-
-    cout << "\nErrors:\n";
-    for (const auto& error : errors) {
-        cout << error << "\n";
-    }
+    return tokens;
 }
 
 int main(){
-    string code = R"(#include <stdio.h>
-
-int main(){
-    // This is a single line comment
-    int a=5, b=10;
-    int sum=a+b; // Arithmetic operation
-    printf(sum);
+    string code = R"(#include <iostream>
+    #include <vector>
 
     /* This is a
-       multi-line comment */
-    if (a<b){ // Boolean expression
-        printf();
-    }else{
-        printf();
-    }
+    multi-line comment */
 
-    // For loop
-    for (int i=0;i<5;i++){
-        printf(i);
-    }
+    // This is a single line comment
 
-    a<<=c;
-    a==f
-    x!=e
+    int main(){
+        // Variable declarations
+        int a=10,b=20;
+        float c=3.14;
+        char d= 'd';
+        std::string str= "Hello, World!";
+        std::vector<int> vec={1,2,3,4,5};
+
+        // Arithmetic operations
+        int sum=a+b;
+        int diff=a-b;
+        int prod=a*b;
+        int quot=b/a;
+        int rem=b%a;
+
+        // Boolean expressions
+        bool less=a<b;
+        bool greater = a > b;
+        bool equal = a==b;
+        bool notEqual = a != b;
+
+        // Control structures
+        if (a <b) {
+            printf("a is less than b\n");
+        } else {
+            printf("a is greater than or equal to b\n");
+        }
+
+        for (int i = 0; i < 5; i++) {
+            printf("i = %d\n", i);
+        }
+
+        // Bitwise operations
+        a<<=1;
+        b >>= 1;
+
+        return 0;
+    })";
+
+    string preprocessors = extractPreprocessors(code);
+    string noComments = removeComments(code);
+    string noExtraSpaces = removeExtraSpaces(noComments);
+
+    map<string, string> tokens = analyzeCode(noExtraSpaces);
+
+    cout << "Lexeme\t\tToken\n";
+    for (const auto& lexeme : lexemes) {
+        auto it = tokens.find(lexeme);
+        if (it != tokens.end()) {
+            cout << lexeme << "\t\t" << it->second << "\n";
+        }
+    }
 
     return 0;
-})";
-
-string preprocessors = extractPreprocessors(code);
-string noComments = removeComments(code);
-string noExtraSpaces = removeExtraSpaces(noComments);
-
-analyzeCode(noExtraSpaces);
-return 0;
-
 }
 
 /*
-1- string in the sample code handle
-2- numbers decimal, octal, hexa, binary
-3- check for any missing types to handle
-4- how to return the tokens
+- numbers decimal, octal, hexa, binary
+- check for any missing types to handle
+- :: and the char and strings
 */
