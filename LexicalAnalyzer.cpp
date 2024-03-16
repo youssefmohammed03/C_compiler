@@ -116,7 +116,10 @@ vector<pair<string, string>> analyzeCode(const string& code) {
             temp += c;
             if(c == '\"'){
                 int j = i + 1;
-                while (j < code.size() && code[j] != '\"') {
+                while (j < code.size()) {
+                    if (code[j] == '\"' && code[j-1] != '\\') {
+                        break;
+                    }
                     temp += code[j++];
                 }
                 if (j < code.size()) {
@@ -171,7 +174,7 @@ int main(){
         int a=10,b=20;
         float c=3.14;
         char d='d';
-        std::string str="Hello, World!";
+        std::string str="Hello, \"World!";
         std::vector<int> vec={1,2,3,4,5};
 
         // Arithmetic operations
