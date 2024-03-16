@@ -38,52 +38,52 @@ string extractPreprocessors(string code) {
     return result;
 }
 
-void punctuationDetector(const string& temp, map<string, string>& tokens) {
+void punctuationDetector(const string& temp, vector<pair<string, string>>& tokens) {
     if(temp == "{"){
-        tokens.insert(make_pair(temp, "start curly bracket"));
+        tokens.push_back(make_pair(temp, "start curly bracket"));
     } else if(temp == "}"){
-        tokens.insert(make_pair(temp, "end curly bracket"));
+        tokens.push_back(make_pair(temp, "end curly bracket"));
     } else if(temp == "("){
-        tokens.insert(make_pair(temp, "start parenthesis"));
+        tokens.push_back(make_pair(temp, "start parenthesis"));
     } else if(temp == ")"){
-        tokens.insert(make_pair(temp, "end parenthesis"));
+        tokens.push_back(make_pair(temp, "end parenthesis"));
     } else if(temp == "["){
-        tokens.insert(make_pair(temp, "start square bracket"));
+        tokens.push_back(make_pair(temp, "start square bracket"));
     } else if(temp == "]"){
-        tokens.insert(make_pair(temp, "end square bracket"));
+        tokens.push_back(make_pair(temp, "end square bracket"));
     } else if(temp == ";"){
-        tokens.insert(make_pair(temp, "semicolon"));
+        tokens.push_back(make_pair(temp, "semicolon"));
     } else if(temp == ","){
-        tokens.insert(make_pair(temp, "comma"));
+        tokens.push_back(make_pair(temp, "comma"));
     } else if(temp == "."){
-        tokens.insert(make_pair(temp, "dot"));
+        tokens.push_back(make_pair(temp, "dot"));
     } else if(temp == ":"){
-        tokens.insert(make_pair(temp, "colon"));
+        tokens.push_back(make_pair(temp, "colon"));
     }
 }
 
-void processToken(const string& temp, map<string, string>& tokens) {
+void processToken(const string& temp, vector<pair<string, string>>& tokens) {
     if (regex_match(temp, keywordPattern)) {
-        tokens.insert(make_pair(temp, "keyword"));
+        tokens.push_back(make_pair(temp, "keyword"));
     } else if (regex_match(temp, dataTypePattern)) {
-        tokens.insert(make_pair(temp, "data type"));
+        tokens.push_back(make_pair(temp, "data type"));
     } else if (regex_match(temp, arithPattern)) {
-        tokens.insert(make_pair(temp, "arithmetic expression"));
+        tokens.push_back(make_pair(temp, "arithmetic expression"));
     } else if (regex_match(temp, boolPattern)) {
-        tokens.insert(make_pair(temp, "boolean expression"));
+        tokens.push_back(make_pair(temp, "boolean expression"));
     } else if (regex_match(temp, assignmentPattern)) {
-        tokens.insert(make_pair(temp, "assignment statement"));
+        tokens.push_back(make_pair(temp, "assignment statement"));
     } else if (regex_match(temp, punctuationPattern)) {
         punctuationDetector(temp, tokens);
     } else {
-        tokens.insert(make_pair(temp, "identifier"));
+        tokens.push_back(make_pair(temp, "identifier"));
     }
     lexemes.push_back(temp);
 }
 
 void twoCharOps(string& temp, const string& code, int& i) {
     string multiCharOp;
-    string twoCharOps[] = {"||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^="};
+    string twoCharOps[] = {"||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^=", "::"};
     string threeCharOps[] = {"<<=", ">>="};
 
     if (i + 1 < code.size()) {
@@ -102,8 +102,8 @@ void twoCharOps(string& temp, const string& code, int& i) {
     }
 }
 
-map<string, string> analyzeCode(const string& code) {
-    map<string, string> tokens;
+vector<pair<string, string>> analyzeCode(const string& code) {
+    vector<pair<string, string>> tokens;
     string separators = "(){}[].,;+-*/%~<>^&|!=:\"\'";
     string temp;
     for (int i = 0; i < code.size(); ++i) {
@@ -123,7 +123,7 @@ map<string, string> analyzeCode(const string& code) {
                     temp += code[j++];
                 }
                 i = j - 1;
-                tokens.insert(make_pair(temp, "string"));
+                tokens.push_back(make_pair(temp, "string"));
             } else if(c == '\''){
                 int j = i + 1;
                 while (j < code.size() && code[j] != '\'') {
@@ -133,7 +133,7 @@ map<string, string> analyzeCode(const string& code) {
                     temp += code[j++];
                 }
                 i = j - 1;
-                tokens.insert(make_pair(temp, "character"));
+                tokens.push_back(make_pair(temp, "character"));
             } else{
                 twoCharOps(temp, code, i);
                 processToken(temp, tokens);
@@ -170,8 +170,8 @@ int main(){
         // Variable declarations
         int a=10,b=20;
         float c=3.14;
-        char d= 'd';
-        std::string str= "Hello, World!";
+        char d='d';
+        std::string str="Hello, World!";
         std::vector<int> vec={1,2,3,4,5};
 
         // Arithmetic operations
@@ -209,15 +209,12 @@ int main(){
     string noComments = removeComments(code);
     string noExtraSpaces = removeExtraSpaces(noComments);
 
-    map<string, string> tokens = analyzeCode(noExtraSpaces);
+    vector<pair<string, string>> tokens = analyzeCode(noExtraSpaces);
 
     cout << "Lexeme\t\tToken\n";
-    for (const auto& lexeme : lexemes) {
-        auto it = tokens.find(lexeme);
-        if (it != tokens.end()) {
-            cout << lexeme << "\t\t" << it->second << "\n";
-        }
-    }
+    for (const auto& token : tokens) {
+    cout << token.first << "\t\t" << token.second << "\n";
+}
 
     return 0;
 }
@@ -225,5 +222,4 @@ int main(){
 /*
 - numbers decimal, octal, hexa, binary
 - check for any missing types to handle
-- :: and the char and strings
 */
