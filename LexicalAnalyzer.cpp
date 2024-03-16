@@ -102,6 +102,36 @@ void twoCharOps(string& temp, const string& code, int& i) {
     }
 }
 
+void numbersDetector(string& temp, const string& code, int& i, vector<pair<string, string>>& tokens) {
+    string number = temp;
+
+    if (number != "0") {
+        while (i + 1 < code.size() && (isdigit(code[i + 1]) || code[i + 1] == '.')) {
+            number += code[++i];
+        }
+        tokens.push_back(make_pair(number, "decimal number"));
+    } else {
+        if (i + 1 < code.size() && isdigit(code[i + 1])) {
+            while (i + 1 < code.size() && isdigit(code[i + 1])) {
+                number += code[++i];
+            }
+            tokens.push_back(make_pair(number, "octal number"));
+        } else if (i + 1 < code.size() && (code[i + 1] == 'x' || code[i + 1] == 'X')) {
+            number += code[++i];
+            while (i + 1 < code.size() && isxdigit(code[i + 1])) {
+                number += code[++i];
+            }
+            tokens.push_back(make_pair(number, "hexadecimal number"));
+        } else if (i + 1 < code.size() && (code[i + 1] == 'b' || code[i + 1] == 'B')) {
+            number += code[++i];
+            while (i + 1 < code.size() && (code[i + 1] == '0' || code[i + 1] == '1')) {
+                number += code[++i];
+            }
+            tokens.push_back(make_pair(number, "binary number"));
+        }
+    }
+}
+
 vector<pair<string, string>> analyzeCode(const string& code) {
     vector<pair<string, string>> tokens;
     string separators = "(){}[].,;+-*/%~<>^&|!=:\"\'";
@@ -148,7 +178,12 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                 processToken(temp, tokens);
                 temp.clear();
             }
-        } else {
+        } else if(isdigit(c) && (temp.empty() || isdigit(temp[0]))){
+            temp += c;
+            numbersDetector(temp, code, i, tokens);
+            temp.clear();
+        }
+        else {
             temp += c;
         }
     }
@@ -201,6 +236,13 @@ int main(){
             printf("i = %d\n", i);
         }
 
+        int hex = 0x1AB32;
+        int oct = 0123;
+        int bin = 0b1010;
+        int dec = 123;
+        float f = 1.23;
+        double d = 1.23;
+
         // Bitwise operations
         a<<=1;
         b >>= 1;
@@ -221,8 +263,3 @@ int main(){
 
     return 0;
 }
-
-/*
-- numbers decimal, octal, hexa, binary
-- check for any missing types to handle
-*/
