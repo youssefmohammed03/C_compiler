@@ -5,17 +5,24 @@
 #include <vector>
 using namespace std;
 
-vector<string> lexemes;
+vector<string> errors;
+int counter = 0;
 
 regex keywordPattern("\\b(alignas|alignof|auto|bool|break|case|const|constexpr|continue|default|do|else|enum|extern|false|for|goto|if|inline|register|restrict|return|signed|sizeof|static|static_assert|struct|switch|thread_local|true|typedef|typeof|typeof_unqual|union|unsigned|void|volatile|while|_Alignas|_Alignof|_Atomic|_Bool|_Complex|_Decimal128|_Decimal32|_Decimal64|_Generic|_Imaginary|_Noreturn|_Static_assert|_Thread_local)\\b");
 regex dataTypePattern("\\b(char|double|float|int|long|short|signed|unsigned|void)\\b");
 regex arithPattern("(\\+\\+|\\-\\-|\\+|\\-|\\*|\\/|\\%|\\~|\\<\\<|\\>\\>|\\^|([^\\&]|^)\\&([^\\&]|$)|([^\\|]|^)\\|([^\\|]|$))");
 regex boolPattern("(\\=\\=|\\!\\=|\\<\\=|\\>\\=|([^\\>]|^)\\>([^\\>]|$)|([^\\<]|^)\\<([^\\<]|$)|\\!|\\&\\&|\\|\\|)");
 regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
-regex punctuationPattern(R"([{}()\[\];,.:])");
+regex punctuationPattern("(\\?|\\-\\>|\\:\\:|\\{|\\}|\\(|\\)|\\[|\\]|\\;|\\,|\\.|\\:)");
+regex identifierPattern("^[_a-zA-Z][_a-zA-Z0-9]*$");
+regex decimal_regex("^[-+]?[0-9]*\\.?[0-9]+$");
+regex binary_regex("^0b[01]+$");
+regex octal_regex("^0[0-7]*$");
+regex hex_regex("^0x[a-fA-F0-9]+$");
+regex string_regex("\"(\\\\.|[^\"])*\"");
+regex char_regex("'(\\\\.|[^'])*'");
 
 string removeComments(string code) {
-    
     regex commentPattern("(\\/\\*([^*]|[\r\n]|(\\*+([^*/]|[\r\n])))*\\*\\/)|(\\/\\/.*)|#[^\\n]*");
     return regex_replace(code, commentPattern, "");
 }
@@ -38,52 +45,35 @@ string extractPreprocessors(string code) {
     return result;
 }
 
-void punctuationDetector(const string& temp, vector<pair<string, string>>& tokens) {
-    if(temp == "{"){
-        tokens.push_back(make_pair(temp, "start curly bracket"));
-    } else if(temp == "}"){
-        tokens.push_back(make_pair(temp, "end curly bracket"));
-    } else if(temp == "("){
-        tokens.push_back(make_pair(temp, "start parenthesis"));
-    } else if(temp == ")"){
-        tokens.push_back(make_pair(temp, "end parenthesis"));
-    } else if(temp == "["){
-        tokens.push_back(make_pair(temp, "start square bracket"));
-    } else if(temp == "]"){
-        tokens.push_back(make_pair(temp, "end square bracket"));
-    } else if(temp == ";"){
-        tokens.push_back(make_pair(temp, "semicolon"));
-    } else if(temp == ","){
-        tokens.push_back(make_pair(temp, "comma"));
-    } else if(temp == "."){
-        tokens.push_back(make_pair(temp, "dot"));
-    } else if(temp == ":"){
-        tokens.push_back(make_pair(temp, "colon"));
-    }
+bool isValidIdentifier(const string& str) {
+    return regex_match(str, identifierPattern);
 }
 
 void processToken(const string& temp, vector<pair<string, string>>& tokens) {
     if (regex_match(temp, keywordPattern)) {
-        tokens.push_back(make_pair(temp, "keyword"));
+        tokens.push_back(make_pair(temp, ""));
     } else if (regex_match(temp, dataTypePattern)) {
-        tokens.push_back(make_pair(temp, "data type"));
+        tokens.push_back(make_pair(temp, ""));
     } else if (regex_match(temp, arithPattern)) {
-        tokens.push_back(make_pair(temp, "arithmetic expression"));
+        tokens.push_back(make_pair(temp, ""));
     } else if (regex_match(temp, boolPattern)) {
-        tokens.push_back(make_pair(temp, "boolean expression"));
+        tokens.push_back(make_pair(temp, ""));
     } else if (regex_match(temp, assignmentPattern)) {
-        tokens.push_back(make_pair(temp, "assignment statement"));
+        tokens.push_back(make_pair(temp, ""));
     } else if (regex_match(temp, punctuationPattern)) {
-        punctuationDetector(temp, tokens);
+        tokens.push_back(make_pair(temp, ""));
     } else {
-        tokens.push_back(make_pair(temp, "identifier"));
+        if (isValidIdentifier(temp)) {
+            tokens.push_back(make_pair(temp, to_string(counter++)));
+        } else {
+            errors.push_back(temp);
+        }
     }
-    lexemes.push_back(temp);
 }
 
 void twoCharOps(string& temp, const string& code, int& i) {
     string multiCharOp;
-    string twoCharOps[] = {"||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^=", "::"};
+    string twoCharOps[] = {"||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^=", "->", "::"};
     string threeCharOps[] = {"<<=", ">>="};
 
     if (i + 1 < code.size()) {
@@ -104,37 +94,28 @@ void twoCharOps(string& temp, const string& code, int& i) {
 
 void numbersDetector(string& temp, const string& code, int& i, vector<pair<string, string>>& tokens) {
     string number = temp;
+    bool isInvalid = false;
 
-    if (number != "0") {
-        while (i + 1 < code.size() && (isdigit(code[i + 1]) || code[i + 1] == '.')) {
-            number += code[++i];
-        }
+    while (i + 1 < code.size() && (isdigit(code[i + 1]) || code[i + 1] == '.' || isalpha(code[i + 1]))) {
+        number += code[++i];
+    }
+
+    if (regex_match(number, decimal_regex)) {
         tokens.push_back(make_pair(number, "decimal number"));
+    } else if (regex_match(number, binary_regex)) {
+        tokens.push_back(make_pair(number, "binary number"));
+    } else if (regex_match(number, octal_regex)) {
+        tokens.push_back(make_pair(number, "octal number"));
+    } else if (regex_match(number, hex_regex)) {
+        tokens.push_back(make_pair(number, "hexadecimal number"));
     } else {
-        if (i + 1 < code.size() && isdigit(code[i + 1])) {
-            while (i + 1 < code.size() && isdigit(code[i + 1])) {
-                number += code[++i];
-            }
-            tokens.push_back(make_pair(number, "octal number"));
-        } else if (i + 1 < code.size() && (code[i + 1] == 'x' || code[i + 1] == 'X')) {
-            number += code[++i];
-            while (i + 1 < code.size() && isxdigit(code[i + 1])) {
-                number += code[++i];
-            }
-            tokens.push_back(make_pair(number, "hexadecimal number"));
-        } else if (i + 1 < code.size() && (code[i + 1] == 'b' || code[i + 1] == 'B')) {
-            number += code[++i];
-            while (i + 1 < code.size() && (code[i + 1] == '0' || code[i + 1] == '1')) {
-                number += code[++i];
-            }
-            tokens.push_back(make_pair(number, "binary number"));
-        }
+        errors.push_back(number);
     }
 }
 
 vector<pair<string, string>> analyzeCode(const string& code) {
     vector<pair<string, string>> tokens;
-    string separators = "(){}[].,;+-*/%~<>^&|!=:\"\'";
+    string separators = "(){}[]?.,;+-*/%~<>^&|!=:\"\'";
     string temp;
     for (int i = 0; i < code.size(); ++i) {
         char c = code[i];
@@ -156,7 +137,7 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                     temp += code[j++];
                 }
                 i = j - 1;
-                tokens.push_back(make_pair(temp, "string"));
+                tokens.push_back(make_pair(temp, to_string(counter++)));
             } else if(c == '\''){
                 int j = i + 1;
                 while (j < code.size() && code[j] != '\'') {
@@ -166,11 +147,13 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                     temp += code[j++];
                 }
                 i = j - 1;
-                tokens.push_back(make_pair(temp, "character"));
-            } else{
+                tokens.push_back(make_pair(temp, to_string(counter++)));
+            } else if((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])){
+                numbersDetector(temp, code, i, tokens);
+            }
+            else{
                 twoCharOps(temp, code, i);
                 processToken(temp, tokens);
-
             }
             temp.clear();
         } else if (c == ' ') {
@@ -248,6 +231,17 @@ int main(){
         b >>= 1;
 
         return 0;
+
+        12
+        0x12
+        0b1010
+        0123
+        1.23
+        -1.23
+        int 123abc;
+        int !eroi;
+
+
     })";
 
     string preprocessors = extractPreprocessors(code);
@@ -256,10 +250,19 @@ int main(){
 
     vector<pair<string, string>> tokens = analyzeCode(noExtraSpaces);
 
-    cout << "Lexeme\t\tToken\n";
+    cout << "Token\n";
     for (const auto& token : tokens) {
-    cout << token.first << "\t\t" << token.second << "\n";
-}
+        if(token.second != ""){
+            cout << "<" << token.first << ", " << token.second << ">" << "\n";
+        } else{
+            cout << "<" << token.first << ">" << "\n";
+        }
+    }
+
+    cout << "\nErrors\n";
+    for (const auto& element : errors) {
+        cout << element << ' ';
+    }
 
     return 0;
 }
