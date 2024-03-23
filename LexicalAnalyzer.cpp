@@ -15,12 +15,30 @@ regex boolPattern("(\\=\\=|\\!\\=|\\<\\=|\\>\\=|([^\\>]|^)\\>([^\\>]|$)|([^\\<]|
 regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
 regex punctuationPattern("(\\?|\\-\\>|\\:\\:|\\{|\\}|\\(|\\)|\\[|\\]|\\;|\\,|\\.|\\:)");
 regex identifierPattern("^[_a-zA-Z][_a-zA-Z0-9]*$");
-regex decimal_regex("^[-+]?[0-9]*\\.?[0-9]+$");
+regex decimal_regex("^[1-9][0-9]*\\.?[0-9]*$");
 regex binary_regex("^0b[01]+$");
 regex octal_regex("^0[0-7]*$");
 regex hex_regex("^0x[a-fA-F0-9]+$");
 regex string_regex("\"(\\\\.|[^\"])*\"");
 regex char_regex("'(\\\\.|[^'])*'");
+
+void printTokens(const vector<pair<string, string>>& tokens) {
+    cout << "Tokens\n";
+    for (const auto& token : tokens) {
+        if(token.second != ""){
+            cout << "<" << token.first << ", " << token.second << ">" << "\n";
+        } else{
+            cout << "<" << token.first << ">" << "\n";
+        }
+    }
+}
+
+void printErrors() {
+    cout << "Errors\n";
+    for (const auto& element : errors) {
+        cout << element << ' ';
+    }
+}
 
 string removeComments(string code) {
     regex commentPattern("(\\/\\*([^*]|[\r\n]|(\\*+([^*/]|[\r\n])))*\\*\\/)|(\\/\\/.*)|#[^\\n]*");
@@ -233,13 +251,14 @@ int main(){
         return 0;
 
         12
-        0x12
+        0x12abc
         0b1010
         0123
         1.23
         -1.23
         int 123abc;
         int !eroi;
+        0123
 
 
     })";
@@ -250,19 +269,8 @@ int main(){
 
     vector<pair<string, string>> tokens = analyzeCode(noExtraSpaces);
 
-    cout << "Token\n";
-    for (const auto& token : tokens) {
-        if(token.second != ""){
-            cout << "<" << token.first << ", " << token.second << ">" << "\n";
-        } else{
-            cout << "<" << token.first << ">" << "\n";
-        }
-    }
-
-    cout << "\nErrors\n";
-    for (const auto& element : errors) {
-        cout << element << ' ';
-    }
+    printTokens(tokens);
+    printErrors();
 
     return 0;
 }
