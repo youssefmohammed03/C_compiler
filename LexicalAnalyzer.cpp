@@ -119,6 +119,7 @@ void processToken(const string& temp, vector<pair<string, string>>& tokens) {
         }
         else {
             errors.push_back(temp);
+
         }
     }
 }
@@ -170,6 +171,7 @@ void numbersDetector(string& temp, const string& code, int& i, vector<pair<strin
     }
     else {
         errors.push_back(number);
+
     }
 }
 
