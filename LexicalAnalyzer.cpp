@@ -111,13 +111,15 @@ void processToken(const string& temp, vector<pair<string, string>>& tokens) {
                 symbolTableVector.push_back(make_pair(temp, to_string(counter++)));
                 tokens.push_back(make_pair("id", symbolTableVector.back().second));
                 lexemes.push_back(temp);
-            } else {
+            }
+            else {
                 tokens.push_back(make_pair("id", it->second));
                 lexemes.push_back(temp);
             }
         }
         else {
             errors.push_back(temp);
+
         }
     }
 }
@@ -169,6 +171,7 @@ void numbersDetector(string& temp, const string& code, int& i, vector<pair<strin
     }
     else {
         errors.push_back(number);
+
     }
 }
 
@@ -190,7 +193,7 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                     if (code[j] == '\"' && code[j - 1] != '\\') {
                         break;
                     }
-                    temp += code[j++]; 
+                    temp += code[j++];
                 }
                 if (j < code.size()) {
                     temp += code[j++];
@@ -207,7 +210,7 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                     temp += code[j++];
                 }
                 i = j - 1;
-                processToken(temp, tokens);                
+                processToken(temp, tokens);
             }
             else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
                 numbersDetector(temp, code, i, tokens);
