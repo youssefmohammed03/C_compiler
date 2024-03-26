@@ -134,7 +134,7 @@ namespace ScannerGUI2 {
             }
             else {
                 errors.push_back(temp);
-                lexemes.push_back(temp);
+        
             }
         }
     }
@@ -186,7 +186,7 @@ namespace ScannerGUI2 {
         }
         else {
             errors.push_back(number);
-            lexemes.push_back(number);
+ 
         }
     }
 
