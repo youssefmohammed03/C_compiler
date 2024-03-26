@@ -22,6 +22,7 @@ namespace ScannerGUI2 {
     using namespace System::Drawing;
 
     vector<string> errors;
+    vector<string> lexemes;
     vector<pair<string, string>> symbolTableVector;
     int counter = 0;
 
@@ -32,7 +33,7 @@ namespace ScannerGUI2 {
     regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
     regex punctuationPattern("(\\?|\\-\\>|\\:\\:|\\{|\\}|\\(|\\)|\\[|\\]|\\;|\\,|\\.|\\:)");
     regex identifierPattern("^[_a-zA-Z][_a-zA-Z0-9]*$");
-    regex decimal_regex("^[-+]?[1-9][0-9]\\.?[0-9]$");
+    regex decimal_regex("^[-+]?[1-9][0-9]*\\.?[0-9]*$");
     regex binary_regex("^0b[01]+$");
     regex octal_regex("^0[0-7]*$");
     regex hex_regex("^0x[a-fA-F0-9]+$");
@@ -54,7 +55,14 @@ namespace ScannerGUI2 {
     void printErrors() {
         cout << "Errors\n";
         for (const auto& element : errors) {
-            cout << element << ' ';
+            cout << element << endl;
+        }
+    }
+
+    void printLexemes() {
+        cout << "Lexemes\n";
+        for (const string& lex : lexemes) {
+            cout << lex << endl;
         }
     }
 
@@ -88,36 +96,45 @@ namespace ScannerGUI2 {
     void processToken(const string& temp, vector<pair<string, string>>& tokens) {
         if (regex_match(temp, keywordPattern)) {
             tokens.push_back(make_pair(temp, ""));
+            lexemes.push_back(temp);
         }
         else if (regex_match(temp, dataTypePattern)) {
             tokens.push_back(make_pair(temp, ""));
+            lexemes.push_back(temp);
         }
         else if (regex_match(temp, arithPattern)) {
             tokens.push_back(make_pair(temp, ""));
+            lexemes.push_back(temp);
         }
         else if (regex_match(temp, boolPattern)) {
             tokens.push_back(make_pair(temp, ""));
+            lexemes.push_back(temp);
         }
         else if (regex_match(temp, assignmentPattern)) {
             tokens.push_back(make_pair(temp, ""));
+            lexemes.push_back(temp);
         }
         else if (regex_match(temp, punctuationPattern)) {
             tokens.push_back(make_pair(temp, ""));
+            lexemes.push_back(temp);
         }
         else {
             if (isValidIdentifier(temp)) {
-                // Check if identifier is already present in symbol table
                 auto it = find_if(symbolTableVector.begin(), symbolTableVector.end(),
                     [&](const pair<string, string>& entry) { return entry.first == temp; });
                 if (it == symbolTableVector.end()) {
-                    // If not present, add it to the symbol table with unique index
                     symbolTableVector.push_back(make_pair(temp, to_string(counter++)));
+                    tokens.push_back(make_pair("id", symbolTableVector.back().second));
+                    lexemes.push_back(temp);
                 }
-                // Add the token to tokens vector
-                tokens.push_back(make_pair(temp, symbolTableVector.back().second));
+                else {
+                    tokens.push_back(make_pair("id", it->second));
+                    lexemes.push_back(temp);
+                }
             }
             else {
                 errors.push_back(temp);
+                lexemes.push_back(temp);
             }
         }
     }
@@ -153,18 +170,23 @@ namespace ScannerGUI2 {
 
         if (regex_match(number, decimal_regex)) {
             tokens.push_back(make_pair(number, "decimal number"));
+            lexemes.push_back(number);
         }
         else if (regex_match(number, binary_regex)) {
             tokens.push_back(make_pair(number, "binary number"));
+            lexemes.push_back(number);
         }
         else if (regex_match(number, octal_regex)) {
             tokens.push_back(make_pair(number, "octal number"));
+            lexemes.push_back(number);
         }
         else if (regex_match(number, hex_regex)) {
             tokens.push_back(make_pair(number, "hexadecimal number"));
+            lexemes.push_back(number);
         }
         else {
             errors.push_back(number);
+            lexemes.push_back(number);
         }
     }
 
@@ -193,8 +215,6 @@ namespace ScannerGUI2 {
                     }
                     i = j - 1;
                     processToken(temp, tokens);
-                    tokens.push_back(make_pair(temp, to_string(counter++)));
-
                 }
                 else if (c == '\'') {
                     int j = i + 1;
@@ -206,8 +226,6 @@ namespace ScannerGUI2 {
                     }
                     i = j - 1;
                     processToken(temp, tokens);
-                    tokens.push_back(make_pair(temp, to_string(counter++)));
-
                 }
                 else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
                     numbersDetector(temp, code, i, tokens);
@@ -242,11 +260,9 @@ namespace ScannerGUI2 {
     }
 
     void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
-        // Print table header
         cout << endl << setw(15) << left << "Identifier" << setw(25) << "Index" << endl;
         cout << "------------------------" << endl;
 
-        // Print table rows
         for (const auto& entry : symbolTable) {
             cout << setw(15) << left << entry.first << setw(25) << entry.second << endl;
         }
@@ -383,74 +399,82 @@ namespace ScannerGUI2 {
 #pragma endregion
 #include <Windows.h> // Required for MessageBox
 
-     private: System::Void updateDictionbutton_Click(System::Object^ sender, System::EventArgs^ e) {
-         // Open a file dialog for the user to select a text file
-         OpenFileDialog^ openFileDialog = gcnew OpenFileDialog();
-         openFileDialog->Filter = "Text files|*.txt|All files (*.*)|*.*";
-         openFileDialog->FilterIndex = 1;
-         openFileDialog->RestoreDirectory = true;
+    private: System::Void updateDictionbutton_Click(System::Object^ sender, System::EventArgs^ e) {
+        // Open a file dialog for the user to select a text file
+        OpenFileDialog^ openFileDialog = gcnew OpenFileDialog();
+        openFileDialog->Filter = "Text files|*.txt|All files (*.*)|*.*";
+        openFileDialog->FilterIndex = 1;
+        openFileDialog->RestoreDirectory = true;
 
-         if (openFileDialog->ShowDialog() == System::Windows::Forms::DialogResult::OK)
-         {
-             // Get the selected file path
-             String^ filePath = openFileDialog->FileName;
+        if (openFileDialog->ShowDialog() == System::Windows::Forms::DialogResult::OK)
+        {
+            // Get the selected file path
+            String^ filePath = openFileDialog->FileName;
 
-             // Convert System::String^ to std::string
-             std::string filePathStd = msclr::interop::marshal_as<std::string>(filePath);
+            // Convert System::String^ to std::string
+            std::string filePathStd = msclr::interop::marshal_as<std::string>(filePath);
 
-             // Read the content of the file and store it in sourceCode
-             std::ifstream input(filePathStd);
-             std::string line;
-             std::string sourceCode;
-             while (std::getline(input, line))
-             {
-                 sourceCode += line + "\n"; // Concatenate each line with a newline character
-             }
+            // Read the content of the file and store it in sourceCode
+            std::ifstream input(filePathStd);
+            std::string line;
+            std::string sourceCode;
+            while (std::getline(input, line))
+            {
+                sourceCode += line + "\n"; // Concatenate each line with a newline character
+            }
 
-             // Extract preprocessors, remove comments, and extra spaces
-             string preprocessors = extractPreprocessors(sourceCode);
-             string codeWithoutComments = removeComments(sourceCode);
-             string cleanCode = removeExtraSpaces(codeWithoutComments);
+            // Extract preprocessors, remove comments, and extra spaces
+            string preprocessors = extractPreprocessors(sourceCode);
+            string codeWithoutComments = removeComments(sourceCode);
+            string cleanCode = removeExtraSpaces(codeWithoutComments);
 
-             // Clear previous lexemes
-             //lexemes.clear();
+            // Clear previous lexemes
+            lexemes.clear();
 
-             // Analyze code and store the lexemes
-             vector<pair<string, string>> tokens = analyzeCode(cleanCode);
-             //for (const auto& token : tokens) {
-             //    lexemes.push_back(token.first);
-             //}
+            // Analyze code and store the lexemes
+            vector<pair<string, string>> tokens = analyzeCode(cleanCode);
+            for (const auto& token : tokens) {
+                lexemes.push_back(token.first);
+            }
 
-             // Update the label to show the number of lexemes
-             //label3->Text = "Dictionary updated. Total lexemes: " + lexemes.size();
+            // Update the label to show the number of lexemes
+            label3->Text = "Dictionary updated. Total lexemes: " + lexemes.size();
 
-             // Display the lexical analysis result in a RichTextBox
-             Form^ form = gcnew Form();
-             form->Text = "Lexical Analysis Result";
-             form->Size = System::Drawing::Size(600, 400); // Adjusted size for better visibility
+            // Display the lexical analysis result in a RichTextBox
+            Form^ form = gcnew Form();
+            form->Text = "Lexical Analysis Result";
+            form->Size = System::Drawing::Size(600, 400); // Adjusted size for better visibility
 
-             RichTextBox^ richTextBox = gcnew RichTextBox();
-             richTextBox->Dock = DockStyle::Fill;
+            RichTextBox^ richTextBox = gcnew RichTextBox();
+            richTextBox->Dock = DockStyle::Fill;
 
-             // Format the lexical analysis result for better clarity
-             String^ result = gcnew String("Tokens\n");
-             for (const auto& token : tokens) {
-                 if (token.second != "") {
-                     result += gcnew String(("<" + token.first + ", " + token.second + ">\n").c_str());
-                 }
-                 else {
-                     result += gcnew String(("<" + token.first + ">\n").c_str());
-                 }
-             }
-             richTextBox->Text = result;
+            // Format the lexical analysis result for better clarity
+            String^ result = gcnew String("Lexeme\t\tToken\n");
+            for (const auto& token : tokens) {
+                if (token.second != "") {
+                    result += gcnew String((token.first + "\t\t<" + token.first + ", " + token.second + ">\n").c_str());
+                }
+                else {
+                    result += gcnew String((token.first + "\t\t<" + token.first + ">\n").c_str());
+                }
+            }
 
-             richTextBox->ReadOnly = true;
-             richTextBox->ScrollBars = RichTextBoxScrollBars::Both;
+            // Add errors to the result
+            result += gcnew String("\nErrors\n");
+            for (const auto& error : errors) {
+                result += gcnew String((error + "\n").c_str());
+            }
 
-             form->Controls->Add(richTextBox);
-             form->ShowDialog();
-         }
-     }
+            printSymbolTable(symbolTableVector);
+            richTextBox->Text = result;
+
+            richTextBox->ReadOnly = true;
+            richTextBox->ScrollBars = RichTextBoxScrollBars::Both;
+
+            form->Controls->Add(richTextBox);
+            form->Show();
+        }
+    }
 
 private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e) {
     // Extract preprocessors, remove comments, and extra spaces
@@ -460,56 +484,67 @@ private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e
 
     // Analyze code and display the result
     vector<pair<string, string>> tokens = analyzeCode(cleanCode);
-    String^ result = gcnew String("Tokens\n");
+    String^ result = gcnew String("Lexeme\t\tToken\n");
     for (const auto& token : tokens) {
         if (token.second != "") {
-            result += gcnew String(("<" + token.first + ", " + token.second + ">\n").c_str());
+            result += gcnew String((token.first + "\t\t<" + token.first + ", " + token.second + ">\n").c_str());
         }
         else {
-            result += gcnew String(("<" + token.first + ">\n").c_str());
+            result += gcnew String((token.first + "\t\t<" + token.first + ">\n").c_str());
         }
     }
+
+    // Add errors to the result
+    result += gcnew String("\nErrors\n");
+    for (const auto& error : errors) {
+        result += gcnew String((error + "\n").c_str());
+    }
+
     // Display the lexical analysis result in a RichTextBox within a form
-    Form^ form = gcnew Form();
-    form->Text = "Lexical Analysis Result";
-    form->Size = System::Drawing::Size(600, 400); // Adjusted size for better visibility
+    Form^ form1 = gcnew Form();
+    form1->Text = "Lexical Analysis Result";
+    form1->Size = System::Drawing::Size(600, 400); // Adjusted size for better visibility
 
-    RichTextBox^ richTextBox = gcnew RichTextBox();
-    richTextBox->Dock = DockStyle::Fill;
-    richTextBox->Text = result;
-    richTextBox->ReadOnly = true;
-    richTextBox->ScrollBars = RichTextBoxScrollBars::Both;
+    RichTextBox^ richTextBox1 = gcnew RichTextBox();
+    richTextBox1->Dock = DockStyle::Fill;
+    richTextBox1->Text = result;
+    richTextBox1->ReadOnly = true;
+    richTextBox1->ScrollBars = RichTextBoxScrollBars::Both;
 
-    form->Controls->Add(richTextBox);
-    form->ShowDialog();
+    form1->Controls->Add(richTextBox1);
+    form1->Show(); // Changed from ShowDialog to Show
+
+    // Display the symbol table in a separate form
+    printSymbolTable(symbolTableVector);
 }
 
-       void printSymbolTable(const std::map<std::string, int>& symbolTable) {
+       void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
            // Create a new form
-           Form^ form = gcnew Form();
-           form->Text = "Symbol Table";
-           form->Size = System::Drawing::Size(600, 400); // Adjusted size for better visibility
+           Form^ form2 = gcnew Form();
+           form2->Text = "Symbol Table";
+           form2->Size = System::Drawing::Size(600, 400); // Adjusted size for better visibility
 
            // Create a new RichTextBox
-           RichTextBox^ richTextBox = gcnew RichTextBox();
-           richTextBox->Dock = DockStyle::Fill;
+           RichTextBox^ richTextBox2 = gcnew RichTextBox();
+           richTextBox2->Dock = DockStyle::Fill;
 
            // Format the symbol table for better clarity
            String^ table = gcnew String("Identifier\t\tIndex\n");
            for (const auto& entry : symbolTable) {
-               table += gcnew String((entry.first + "\t\t" + std::to_string(entry.second) + "\n").c_str());
+               table += gcnew String((entry.first + "\t\t" + entry.second + "\n").c_str());
            }
-           richTextBox->Text = table;
+           richTextBox2->Text = table;
 
-           richTextBox->ReadOnly = true;
-           richTextBox->ScrollBars = RichTextBoxScrollBars::Both;
+           richTextBox2->ReadOnly = true;
+           richTextBox2->ScrollBars = RichTextBoxScrollBars::Both;
 
            // Add the RichTextBox to the form
-           form->Controls->Add(richTextBox);
+           form2->Controls->Add(richTextBox2);
 
            // Show the form
-           form->ShowDialog();
+           form2->Show(); // Changed from ShowDialog to Show
        }
+
 
 
 
