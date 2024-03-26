@@ -21,17 +21,44 @@ namespace ScannerGUI2 {
     using namespace System::Windows::Forms;
     using namespace System::Drawing;
 
-    vector<string> lexemes;
+    vector<string> errors;
+    vector<pair<string, string>> symbolTableVector;
+    int counter = 0;
 
     regex keywordPattern("\\b(alignas|alignof|auto|bool|break|case|const|constexpr|continue|default|do|else|enum|extern|false|for|goto|if|inline|register|restrict|return|signed|sizeof|static|static_assert|struct|switch|thread_local|true|typedef|typeof|typeof_unqual|union|unsigned|void|volatile|while|_Alignas|_Alignof|_Atomic|_Bool|_Complex|_Decimal128|_Decimal32|_Decimal64|_Generic|_Imaginary|_Noreturn|_Static_assert|_Thread_local)\\b");
     regex dataTypePattern("\\b(char|double|float|int|long|short|signed|unsigned|void)\\b");
     regex arithPattern("(\\+\\+|\\-\\-|\\+|\\-|\\*|\\/|\\%|\\~|\\<\\<|\\>\\>|\\^|([^\\&]|^)\\&([^\\&]|$)|([^\\|]|^)\\|([^\\|]|$))");
     regex boolPattern("(\\=\\=|\\!\\=|\\<\\=|\\>\\=|([^\\>]|^)\\>([^\\>]|$)|([^\\<]|^)\\<([^\\<]|$)|\\!|\\&\\&|\\|\\|)");
     regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
-    regex punctuationPattern(R"([{}()\[\];,.:])");
+    regex punctuationPattern("(\\?|\\-\\>|\\:\\:|\\{|\\}|\\(|\\)|\\[|\\]|\\;|\\,|\\.|\\:)");
+    regex identifierPattern("^[_a-zA-Z][_a-zA-Z0-9]*$");
+    regex decimal_regex("^[-+]?[1-9][0-9]\\.?[0-9]$");
+    regex binary_regex("^0b[01]+$");
+    regex octal_regex("^0[0-7]*$");
+    regex hex_regex("^0x[a-fA-F0-9]+$");
+    regex string_regex("\"(\\\\.|[^\"])*\"");
+    regex char_regex("'(\\\\.|[^'])*'");
+
+    void printTokens(const vector<pair<string, string>>& tokens) {
+        cout << "Tokens\n";
+        for (const auto& token : tokens) {
+            if (token.second != "") {
+                cout << "<" << token.first << ", " << token.second << ">" << "\n";
+            }
+            else {
+                cout << "<" << token.first << ">" << "\n";
+            }
+        }
+    }
+
+    void printErrors() {
+        cout << "Errors\n";
+        for (const auto& element : errors) {
+            cout << element << ' ';
+        }
+    }
 
     string removeComments(string code) {
-
         regex commentPattern("(\\/\\*([^*]|[\r\n]|(\\*+([^*/]|[\r\n])))*\\*\\/)|(\\/\\/.*)|#[^\\n]*");
         return regex_replace(code, commentPattern, "");
     }
@@ -54,67 +81,50 @@ namespace ScannerGUI2 {
         return result;
     }
 
-    void punctuationDetector(const string& temp, vector<pair<string, string>>& tokens) {
-        if (temp == "{") {
-            tokens.push_back(make_pair(temp, "start curly bracket"));
-        }
-        else if (temp == "}") {
-            tokens.push_back(make_pair(temp, "end curly bracket"));
-        }
-        else if (temp == "(") {
-            tokens.push_back(make_pair(temp, "start parenthesis"));
-        }
-        else if (temp == ")") {
-            tokens.push_back(make_pair(temp, "end parenthesis"));
-        }
-        else if (temp == "[") {
-            tokens.push_back(make_pair(temp, "start square bracket"));
-        }
-        else if (temp == "]") {
-            tokens.push_back(make_pair(temp, "end square bracket"));
-        }
-        else if (temp == ";") {
-            tokens.push_back(make_pair(temp, "semicolon"));
-        }
-        else if (temp == ",") {
-            tokens.push_back(make_pair(temp, "comma"));
-        }
-        else if (temp == ".") {
-            tokens.push_back(make_pair(temp, "dot"));
-        }
-        else if (temp == ":") {
-            tokens.push_back(make_pair(temp, "colon"));
-        }
+    bool isValidIdentifier(const string& str) {
+        return regex_match(str, identifierPattern) || regex_match(str, string_regex) || regex_match(str, char_regex);
     }
 
     void processToken(const string& temp, vector<pair<string, string>>& tokens) {
         if (regex_match(temp, keywordPattern)) {
-            tokens.push_back(make_pair(temp, "keyword"));
+            tokens.push_back(make_pair(temp, ""));
         }
         else if (regex_match(temp, dataTypePattern)) {
-            tokens.push_back(make_pair(temp, "data type"));
+            tokens.push_back(make_pair(temp, ""));
         }
         else if (regex_match(temp, arithPattern)) {
-            tokens.push_back(make_pair(temp, "arithmetic expression"));
+            tokens.push_back(make_pair(temp, ""));
         }
         else if (regex_match(temp, boolPattern)) {
-            tokens.push_back(make_pair(temp, "boolean expression"));
+            tokens.push_back(make_pair(temp, ""));
         }
         else if (regex_match(temp, assignmentPattern)) {
-            tokens.push_back(make_pair(temp, "assignment statement"));
+            tokens.push_back(make_pair(temp, ""));
         }
         else if (regex_match(temp, punctuationPattern)) {
-            punctuationDetector(temp, tokens);
+            tokens.push_back(make_pair(temp, ""));
         }
         else {
-            tokens.push_back(make_pair(temp, "identifier"));
+            if (isValidIdentifier(temp)) {
+                // Check if identifier is already present in symbol table
+                auto it = find_if(symbolTableVector.begin(), symbolTableVector.end(),
+                    [&](const pair<string, string>& entry) { return entry.first == temp; });
+                if (it == symbolTableVector.end()) {
+                    // If not present, add it to the symbol table with unique index
+                    symbolTableVector.push_back(make_pair(temp, to_string(counter++)));
+                }
+                // Add the token to tokens vector
+                tokens.push_back(make_pair(temp, symbolTableVector.back().second));
+            }
+            else {
+                errors.push_back(temp);
+            }
         }
-        lexemes.push_back(temp);
     }
 
     void twoCharOps(string& temp, const string& code, int& i) {
         string multiCharOp;
-        string twoCharOps[] = { "||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^=", "::", "->" };
+        string twoCharOps[] = { "||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^=", "->", "::" };
         string threeCharOps[] = { "<<=", ">>=" };
 
         if (i + 1 < code.size()) {
@@ -135,40 +145,32 @@ namespace ScannerGUI2 {
 
     void numbersDetector(string& temp, const string& code, int& i, vector<pair<string, string>>& tokens) {
         string number = temp;
+        bool isInvalid = false;
 
-        if (number != "0") {
-            while (i + 1 < code.size() && (isdigit(code[i + 1]) || code[i + 1] == '.')) {
-                number += code[++i];
-            }
+        while (i + 1 < code.size() && (isdigit(code[i + 1]) || code[i + 1] == '.' || isalpha(code[i + 1]))) {
+            number += code[++i];
+        }
+
+        if (regex_match(number, decimal_regex)) {
             tokens.push_back(make_pair(number, "decimal number"));
         }
+        else if (regex_match(number, binary_regex)) {
+            tokens.push_back(make_pair(number, "binary number"));
+        }
+        else if (regex_match(number, octal_regex)) {
+            tokens.push_back(make_pair(number, "octal number"));
+        }
+        else if (regex_match(number, hex_regex)) {
+            tokens.push_back(make_pair(number, "hexadecimal number"));
+        }
         else {
-            if (i + 1 < code.size() && isdigit(code[i + 1])) {
-                while (i + 1 < code.size() && isdigit(code[i + 1])) {
-                    number += code[++i];
-                }
-                tokens.push_back(make_pair(number, "octal number"));
-            }
-            else if (i + 1 < code.size() && (code[i + 1] == 'x' || code[i + 1] == 'X')) {
-                number += code[++i];
-                while (i + 1 < code.size() && isxdigit(code[i + 1])) {
-                    number += code[++i];
-                }
-                tokens.push_back(make_pair(number, "hexadecimal number"));
-            }
-            else if (i + 1 < code.size() && (code[i + 1] == 'b' || code[i + 1] == 'B')) {
-                number += code[++i];
-                while (i + 1 < code.size() && (code[i + 1] == '0' || code[i + 1] == '1')) {
-                    number += code[++i];
-                }
-                tokens.push_back(make_pair(number, "binary number"));
-            }
+            errors.push_back(number);
         }
     }
 
     vector<pair<string, string>> analyzeCode(const string& code) {
         vector<pair<string, string>> tokens;
-        string separators = "(){}[].,;+-*/%~<>^&|!=:\"\'";
+        string separators = "(){}[]?.,;+-*/%~<>^&|!=:\"\'";
         string temp;
         for (int i = 0; i < code.size(); ++i) {
             char c = code[i];
@@ -190,7 +192,9 @@ namespace ScannerGUI2 {
                         temp += code[j++];
                     }
                     i = j - 1;
-                    tokens.push_back(make_pair(temp, "string"));
+                    processToken(temp, tokens);
+                    tokens.push_back(make_pair(temp, to_string(counter++)));
+
                 }
                 else if (c == '\'') {
                     int j = i + 1;
@@ -201,12 +205,16 @@ namespace ScannerGUI2 {
                         temp += code[j++];
                     }
                     i = j - 1;
-                    tokens.push_back(make_pair(temp, "character"));
+                    processToken(temp, tokens);
+                    tokens.push_back(make_pair(temp, to_string(counter++)));
+
+                }
+                else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
+                    numbersDetector(temp, code, i, tokens);
                 }
                 else {
                     twoCharOps(temp, code, i);
                     processToken(temp, tokens);
-
                 }
                 temp.clear();
             }
@@ -231,6 +239,18 @@ namespace ScannerGUI2 {
         }
 
         return tokens;
+    }
+
+    void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
+        // Print table header
+        cout << endl << setw(15) << left << "Identifier" << setw(25) << "Index" << endl;
+        cout << "------------------------" << endl;
+
+        // Print table rows
+        for (const auto& entry : symbolTable) {
+            cout << setw(15) << left << entry.first << setw(25) << entry.second << endl;
+        }
+        cout << endl;
     }
 
     /// <summary>
@@ -393,16 +413,16 @@ namespace ScannerGUI2 {
              string cleanCode = removeExtraSpaces(codeWithoutComments);
 
              // Clear previous lexemes
-             lexemes.clear();
+             //lexemes.clear();
 
              // Analyze code and store the lexemes
              vector<pair<string, string>> tokens = analyzeCode(cleanCode);
-             for (const auto& token : tokens) {
-                 lexemes.push_back(token.first);
-             }
+             //for (const auto& token : tokens) {
+             //    lexemes.push_back(token.first);
+             //}
 
              // Update the label to show the number of lexemes
-             label3->Text = "Dictionary updated. Total lexemes: " + lexemes.size();
+             //label3->Text = "Dictionary updated. Total lexemes: " + lexemes.size();
 
              // Display the lexical analysis result in a RichTextBox
              Form^ form = gcnew Form();
@@ -413,9 +433,14 @@ namespace ScannerGUI2 {
              richTextBox->Dock = DockStyle::Fill;
 
              // Format the lexical analysis result for better clarity
-             String^ result = gcnew String("Lexemes\t\tTokens\n");
+             String^ result = gcnew String("Tokens\n");
              for (const auto& token : tokens) {
-                 result += gcnew String((token.first + "\t\t" + token.second + "\n").c_str());
+                 if (token.second != "") {
+                     result += gcnew String(("<" + token.first + ", " + token.second + ">\n").c_str());
+                 }
+                 else {
+                     result += gcnew String(("<" + token.first + ">\n").c_str());
+                 }
              }
              richTextBox->Text = result;
 
@@ -435,11 +460,15 @@ private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e
 
     // Analyze code and display the result
     vector<pair<string, string>> tokens = analyzeCode(cleanCode);
-    String^ result = gcnew String("Lexemes\t\tTokens\n");
+    String^ result = gcnew String("Tokens\n");
     for (const auto& token : tokens) {
-        result += gcnew String((token.first + "\t\t" + token.second + "\n").c_str());
+        if (token.second != "") {
+            result += gcnew String(("<" + token.first + ", " + token.second + ">\n").c_str());
+        }
+        else {
+            result += gcnew String(("<" + token.first + ">\n").c_str());
+        }
     }
-
     // Display the lexical analysis result in a RichTextBox within a form
     Form^ form = gcnew Form();
     form->Text = "Lexical Analysis Result";
@@ -454,6 +483,33 @@ private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e
     form->Controls->Add(richTextBox);
     form->ShowDialog();
 }
+
+       void printSymbolTable(const std::map<std::string, int>& symbolTable) {
+           // Create a new form
+           Form^ form = gcnew Form();
+           form->Text = "Symbol Table";
+           form->Size = System::Drawing::Size(600, 400); // Adjusted size for better visibility
+
+           // Create a new RichTextBox
+           RichTextBox^ richTextBox = gcnew RichTextBox();
+           richTextBox->Dock = DockStyle::Fill;
+
+           // Format the symbol table for better clarity
+           String^ table = gcnew String("Identifier\t\tIndex\n");
+           for (const auto& entry : symbolTable) {
+               table += gcnew String((entry.first + "\t\t" + std::to_string(entry.second) + "\n").c_str());
+           }
+           richTextBox->Text = table;
+
+           richTextBox->ReadOnly = true;
+           richTextBox->ScrollBars = RichTextBoxScrollBars::Both;
+
+           // Add the RichTextBox to the form
+           form->Controls->Add(richTextBox);
+
+           // Show the form
+           form->ShowDialog();
+       }
 
 
 

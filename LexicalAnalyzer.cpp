@@ -17,7 +17,7 @@ regex boolPattern("(\\=\\=|\\!\\=|\\<\\=|\\>\\=|([^\\>]|^)\\>([^\\>]|$)|([^\\<]|
 regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
 regex punctuationPattern("(\\?|\\-\\>|\\:\\:|\\{|\\}|\\(|\\)|\\[|\\]|\\;|\\,|\\.|\\:)");
 regex identifierPattern("^[_a-zA-Z][_a-zA-Z0-9]*$");
-regex decimal_regex("^[-+]?[1-9][0-9]*\\.?[0-9]*$");
+regex decimal_regex("^[-+]?[1-9][0-9]\\.?[0-9]$");
 regex binary_regex("^0b[01]+$");
 regex octal_regex("^0[0-7]*$");
 regex hex_regex("^0x[a-fA-F0-9]+$");
