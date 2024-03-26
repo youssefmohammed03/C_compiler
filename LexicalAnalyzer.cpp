@@ -3,9 +3,11 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <iomanip>
 using namespace std;
 
 vector<string> errors;
+vector<pair<string, string>> symbolTableVector;
 int counter = 0;
 
 regex keywordPattern("\\b(alignas|alignof|auto|bool|break|case|const|constexpr|continue|default|do|else|enum|extern|false|for|goto|if|inline|register|restrict|return|signed|sizeof|static|static_assert|struct|switch|thread_local|true|typedef|typeof|typeof_unqual|union|unsigned|void|volatile|while|_Alignas|_Alignof|_Atomic|_Bool|_Complex|_Decimal128|_Decimal32|_Decimal64|_Generic|_Imaginary|_Noreturn|_Static_assert|_Thread_local)\\b");
@@ -25,9 +27,10 @@ regex char_regex("'(\\\\.|[^'])*'");
 void printTokens(const vector<pair<string, string>>& tokens) {
     cout << "Tokens\n";
     for (const auto& token : tokens) {
-        if(token.second != ""){
+        if (token.second != "") {
             cout << "<" << token.first << ", " << token.second << ">" << "\n";
-        } else{
+        }
+        else {
             cout << "<" << token.first << ">" << "\n";
         }
     }
@@ -64,26 +67,41 @@ string extractPreprocessors(string code) {
 }
 
 bool isValidIdentifier(const string& str) {
-    return regex_match(str, identifierPattern);
+    return regex_match(str, identifierPattern) || regex_match(str, string_regex) || regex_match(str, char_regex);
 }
 
 void processToken(const string& temp, vector<pair<string, string>>& tokens) {
     if (regex_match(temp, keywordPattern)) {
         tokens.push_back(make_pair(temp, ""));
-    } else if (regex_match(temp, dataTypePattern)) {
+    }
+    else if (regex_match(temp, dataTypePattern)) {
         tokens.push_back(make_pair(temp, ""));
-    } else if (regex_match(temp, arithPattern)) {
+    }
+    else if (regex_match(temp, arithPattern)) {
         tokens.push_back(make_pair(temp, ""));
-    } else if (regex_match(temp, boolPattern)) {
+    }
+    else if (regex_match(temp, boolPattern)) {
         tokens.push_back(make_pair(temp, ""));
-    } else if (regex_match(temp, assignmentPattern)) {
+    }
+    else if (regex_match(temp, assignmentPattern)) {
         tokens.push_back(make_pair(temp, ""));
-    } else if (regex_match(temp, punctuationPattern)) {
+    }
+    else if (regex_match(temp, punctuationPattern)) {
         tokens.push_back(make_pair(temp, ""));
-    } else {
+    }
+    else {
         if (isValidIdentifier(temp)) {
-            tokens.push_back(make_pair(temp, to_string(counter++)));
-        } else {
+            // Check if identifier is already present in symbol table
+            auto it = find_if(symbolTableVector.begin(), symbolTableVector.end(),
+                [&](const pair<string, string>& entry) { return entry.first == temp; });
+            if (it == symbolTableVector.end()) {
+                // If not present, add it to the symbol table with unique index
+                symbolTableVector.push_back(make_pair(temp, to_string(counter++)));
+            }
+            // Add the token to tokens vector
+            tokens.push_back(make_pair(temp, symbolTableVector.back().second));
+        }
+        else {
             errors.push_back(temp);
         }
     }
@@ -91,8 +109,8 @@ void processToken(const string& temp, vector<pair<string, string>>& tokens) {
 
 void twoCharOps(string& temp, const string& code, int& i) {
     string multiCharOp;
-    string twoCharOps[] = {"||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^=", "->", "::"};
-    string threeCharOps[] = {"<<=", ">>="};
+    string twoCharOps[] = { "||", "&&", "<=", ">=", "==", "!=", "<<", ">>", "++", "--", "-=", "+=", "*=", "/=", "%=", "&=", "|=", "^=", "->", "::" };
+    string threeCharOps[] = { "<<=", ">>=" };
 
     if (i + 1 < code.size()) {
         multiCharOp = temp + code[i + 1];
@@ -120,13 +138,17 @@ void numbersDetector(string& temp, const string& code, int& i, vector<pair<strin
 
     if (regex_match(number, decimal_regex)) {
         tokens.push_back(make_pair(number, "decimal number"));
-    } else if (regex_match(number, binary_regex)) {
+    }
+    else if (regex_match(number, binary_regex)) {
         tokens.push_back(make_pair(number, "binary number"));
-    } else if (regex_match(number, octal_regex)) {
+    }
+    else if (regex_match(number, octal_regex)) {
         tokens.push_back(make_pair(number, "octal number"));
-    } else if (regex_match(number, hex_regex)) {
+    }
+    else if (regex_match(number, hex_regex)) {
         tokens.push_back(make_pair(number, "hexadecimal number"));
-    } else {
+    }
+    else {
         errors.push_back(number);
     }
 }
@@ -143,20 +165,23 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                 temp.clear();
             }
             temp += c;
-            if(c == '\"'){
+            if (c == '\"') {
                 int j = i + 1;
                 while (j < code.size()) {
-                    if (code[j] == '\"' && code[j-1] != '\\') {
+                    if (code[j] == '\"' && code[j - 1] != '\\') {
                         break;
                     }
-                    temp += code[j++];
+                    temp += code[j++]; 
                 }
                 if (j < code.size()) {
                     temp += code[j++];
                 }
                 i = j - 1;
+                processToken(temp, tokens);
                 tokens.push_back(make_pair(temp, to_string(counter++)));
-            } else if(c == '\''){
+                
+            }
+            else if (c == '\'') {
                 int j = i + 1;
                 while (j < code.size() && code[j] != '\'') {
                     temp += code[j++];
@@ -165,21 +190,26 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                     temp += code[j++];
                 }
                 i = j - 1;
+                processToken(temp, tokens);
                 tokens.push_back(make_pair(temp, to_string(counter++)));
-            } else if((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])){
+                
+            }
+            else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
                 numbersDetector(temp, code, i, tokens);
             }
-            else{
+            else {
                 twoCharOps(temp, code, i);
                 processToken(temp, tokens);
             }
             temp.clear();
-        } else if (c == ' ') {
+        }
+        else if (c == ' ') {
             if (!temp.empty()) {
                 processToken(temp, tokens);
                 temp.clear();
             }
-        } else if(isdigit(c) && (temp.empty() || isdigit(temp[0]))){
+        }
+        else if (isdigit(c) && (temp.empty() || isdigit(temp[0]))) {
             temp += c;
             numbersDetector(temp, code, i, tokens);
             temp.clear();
@@ -196,7 +226,18 @@ vector<pair<string, string>> analyzeCode(const string& code) {
     return tokens;
 }
 
-int main(){
+void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
+    // Print table header
+    cout << endl << setw(15) << left << "Identifier" << setw(25) << "Index" << endl;
+    cout << "------------------------" << endl;
+
+    // Print table rows
+    for (const auto& entry : symbolTable) {
+        cout << setw(15) << left << entry.first << setw(25) << entry.second << endl;
+    }
+    cout << endl;
+}
+int main() {
     string code = R"(#include <iostream>
     #include <vector>
 
@@ -271,7 +312,11 @@ int main(){
     vector<pair<string, string>> tokens = analyzeCode(noExtraSpaces);
 
     printTokens(tokens);
+
+    printSymbolTable(symbolTableVector);
+
     printErrors();
+
 
     return 0;
 }
