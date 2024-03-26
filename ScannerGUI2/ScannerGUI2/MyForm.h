@@ -429,13 +429,10 @@ namespace ScannerGUI2 {
             string cleanCode = removeExtraSpaces(codeWithoutComments);
 
             // Clear previous lexemes
-            lexemes.clear();
 
             // Analyze code and store the lexemes
             vector<pair<string, string>> tokens = analyzeCode(cleanCode);
-            for (const auto& token : tokens) {
-                lexemes.push_back(token.first);
-            }
+            
 
             // Update the label to show the number of lexemes
             label3->Text = "Dictionary updated. Total lexemes: " + lexemes.size();
@@ -450,15 +447,16 @@ namespace ScannerGUI2 {
 
             // Format the lexical analysis result for better clarity
             String^ result = gcnew String("Lexeme\t\tToken\n");
+            auto lexIt = lexemes.begin();
             for (const auto& token : tokens) {
                 if (token.second != "") {
-                    result += gcnew String((token.first + "\t\t<" + token.first + ", " + token.second + ">\n").c_str());
+                    result += gcnew String((*lexIt + "\t\t<" + token.first + ", " + token.second + ">\n").c_str());
                 }
                 else {
-                    result += gcnew String((token.first + "\t\t<" + token.first + ">\n").c_str());
+                    result += gcnew String((*lexIt + "\t\t<" + token.first + ">\n").c_str());
                 }
+                ++lexIt;
             }
-
             // Add errors to the result
             result += gcnew String("\nErrors\n");
             for (const auto& error : errors) {
@@ -485,15 +483,16 @@ private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e
     // Analyze code and display the result
     vector<pair<string, string>> tokens = analyzeCode(cleanCode);
     String^ result = gcnew String("Lexeme\t\tToken\n");
+    auto lexIt = lexemes.begin();
     for (const auto& token : tokens) {
         if (token.second != "") {
-            result += gcnew String((token.first + "\t\t<" + token.first + ", " + token.second + ">\n").c_str());
+            result += gcnew String((*lexIt + "\t\t<" + *lexIt + ", " + token.second + ">\n").c_str());
         }
         else {
-            result += gcnew String((token.first + "\t\t<" + token.first + ">\n").c_str());
+            result += gcnew String((*lexIt + "\t\t<" + *lexIt + ">\n").c_str());
         }
+        ++lexIt;
     }
-
     // Add errors to the result
     result += gcnew String("\nErrors\n");
     for (const auto& error : errors) {
