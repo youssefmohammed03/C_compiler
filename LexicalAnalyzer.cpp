@@ -7,6 +7,7 @@
 using namespace std;
 
 vector<string> errors;
+vector<string> lexemes;
 vector<pair<string, string>> symbolTableVector;
 int counter = 0;
 
@@ -39,7 +40,14 @@ void printTokens(const vector<pair<string, string>>& tokens) {
 void printErrors() {
     cout << "Errors\n";
     for (const auto& element : errors) {
-        cout << element << ' ';
+        cout << element << endl;
+    }
+}
+
+void printLexemes() {
+    cout << "Lexemes\n";
+    for (const string& lex : lexemes) {
+        cout << lex << endl;
     }
 }
 
@@ -73,36 +81,44 @@ bool isValidIdentifier(const string& str) {
 void processToken(const string& temp, vector<pair<string, string>>& tokens) {
     if (regex_match(temp, keywordPattern)) {
         tokens.push_back(make_pair(temp, ""));
+        lexemes.push_back(temp);
     }
     else if (regex_match(temp, dataTypePattern)) {
         tokens.push_back(make_pair(temp, ""));
+        lexemes.push_back(temp);
     }
     else if (regex_match(temp, arithPattern)) {
         tokens.push_back(make_pair(temp, ""));
+        lexemes.push_back(temp);
     }
     else if (regex_match(temp, boolPattern)) {
         tokens.push_back(make_pair(temp, ""));
+        lexemes.push_back(temp);
     }
     else if (regex_match(temp, assignmentPattern)) {
         tokens.push_back(make_pair(temp, ""));
+        lexemes.push_back(temp);
     }
     else if (regex_match(temp, punctuationPattern)) {
         tokens.push_back(make_pair(temp, ""));
+        lexemes.push_back(temp);
     }
     else {
         if (isValidIdentifier(temp)) {
-            // Check if identifier is already present in symbol table
             auto it = find_if(symbolTableVector.begin(), symbolTableVector.end(),
                 [&](const pair<string, string>& entry) { return entry.first == temp; });
             if (it == symbolTableVector.end()) {
-                // If not present, add it to the symbol table with unique index
                 symbolTableVector.push_back(make_pair(temp, to_string(counter++)));
+                tokens.push_back(make_pair("id", symbolTableVector.back().second));
+                lexemes.push_back(temp);
+            } else {
+                tokens.push_back(make_pair("id", it->second));
+                lexemes.push_back(temp);
             }
-            // Add the token to tokens vector
-            tokens.push_back(make_pair(temp, symbolTableVector.back().second));
         }
         else {
             errors.push_back(temp);
+            lexemes.push_back(temp);
         }
     }
 }
@@ -138,18 +154,23 @@ void numbersDetector(string& temp, const string& code, int& i, vector<pair<strin
 
     if (regex_match(number, decimal_regex)) {
         tokens.push_back(make_pair(number, "decimal number"));
+        lexemes.push_back(number);
     }
     else if (regex_match(number, binary_regex)) {
         tokens.push_back(make_pair(number, "binary number"));
+        lexemes.push_back(number);
     }
     else if (regex_match(number, octal_regex)) {
         tokens.push_back(make_pair(number, "octal number"));
+        lexemes.push_back(number);
     }
     else if (regex_match(number, hex_regex)) {
         tokens.push_back(make_pair(number, "hexadecimal number"));
+        lexemes.push_back(number);
     }
     else {
         errors.push_back(number);
+        lexemes.push_back(number);
     }
 }
 
@@ -178,8 +199,6 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                 }
                 i = j - 1;
                 processToken(temp, tokens);
-                tokens.push_back(make_pair(temp, to_string(counter++)));
-                
             }
             else if (c == '\'') {
                 int j = i + 1;
@@ -190,9 +209,7 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                     temp += code[j++];
                 }
                 i = j - 1;
-                processToken(temp, tokens);
-                tokens.push_back(make_pair(temp, to_string(counter++)));
-                
+                processToken(temp, tokens);                
             }
             else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
                 numbersDetector(temp, code, i, tokens);
@@ -227,16 +244,15 @@ vector<pair<string, string>> analyzeCode(const string& code) {
 }
 
 void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
-    // Print table header
     cout << endl << setw(15) << left << "Identifier" << setw(25) << "Index" << endl;
     cout << "------------------------" << endl;
 
-    // Print table rows
     for (const auto& entry : symbolTable) {
         cout << setw(15) << left << entry.first << setw(25) << entry.second << endl;
     }
     cout << endl;
 }
+
 int main() {
     string code = R"(#include <iostream>
     #include <vector>
@@ -298,10 +314,8 @@ int main() {
         1.23
         -1.23
         int 123abc;
-        int !eroi;
         0123
         myname3343434
-
 
     })";
 
@@ -316,6 +330,8 @@ int main() {
     printSymbolTable(symbolTableVector);
 
     printErrors();
+
+    printLexemes();
 
 
     return 0;
