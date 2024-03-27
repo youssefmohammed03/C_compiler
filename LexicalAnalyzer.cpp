@@ -199,6 +199,7 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                 }
                 i = j - 1;
                 tokens.push_back(make_pair(temp, "string"));
+                lexemes.push_back(temp);
             }
             else if (c == '\'') {
                 int j = i + 1;
@@ -209,7 +210,8 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                     temp += code[j++];
                 }
                 i = j - 1;
-                tokens.push_back(make_pair(temp, "char"));                
+                tokens.push_back(make_pair(temp, "char"));
+                lexemes.push_back(temp);                
             }
             else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
                 numbersDetector(temp, code, i, tokens);
