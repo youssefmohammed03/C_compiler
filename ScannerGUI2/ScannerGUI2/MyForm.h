@@ -40,31 +40,6 @@ namespace ScannerGUI2 {
     regex string_regex("\"(\\\\.|[^\"])*\"");
     regex char_regex("'(\\\\.|[^'])*'");
 
-    void printTokens(const vector<pair<string, string>>& tokens) {
-        cout << "Tokens\n";
-        for (const auto& token : tokens) {
-            if (token.second != "") {
-                cout << "<" << token.first << ", " << token.second << ">" << "\n";
-            }
-            else {
-                cout << "<" << token.first << ">" << "\n";
-            }
-        }
-    }
-
-    void printErrors() {
-        cout << "Errors\n";
-        for (const auto& element : errors) {
-            cout << element << endl;
-        }
-    }
-
-    void printLexemes() {
-        cout << "Lexemes\n";
-        for (const string& lex : lexemes) {
-            cout << lex << endl;
-        }
-    }
 
     string removeComments(string code) {
         regex commentPattern("(\\/\\*([^*]|[\r\n]|(\\*+([^*/]|[\r\n])))*\\*\\/)|(\\/\\/.*)|#[^\\n]*");
@@ -90,7 +65,7 @@ namespace ScannerGUI2 {
     }
 
     bool isValidIdentifier(const string& str) {
-        return regex_match(str, identifierPattern) || regex_match(str, string_regex) || regex_match(str, char_regex);
+        return regex_match(str, identifierPattern);
     }
 
     void processToken(const string& temp, vector<pair<string, string>>& tokens) {
@@ -134,7 +109,6 @@ namespace ScannerGUI2 {
             }
             else {
                 errors.push_back(temp);
-        
             }
         }
     }
@@ -186,7 +160,6 @@ namespace ScannerGUI2 {
         }
         else {
             errors.push_back(number);
- 
         }
     }
 
@@ -214,7 +187,8 @@ namespace ScannerGUI2 {
                         temp += code[j++];
                     }
                     i = j - 1;
-                    processToken(temp, tokens);
+                    tokens.push_back(make_pair(temp, "string"));
+                    lexemes.push_back(temp);
                 }
                 else if (c == '\'') {
                     int j = i + 1;
@@ -225,7 +199,8 @@ namespace ScannerGUI2 {
                         temp += code[j++];
                     }
                     i = j - 1;
-                    processToken(temp, tokens);
+                    tokens.push_back(make_pair(temp, "char"));
+                    lexemes.push_back(temp);    
                 }
                 else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
                     numbersDetector(temp, code, i, tokens);
@@ -259,15 +234,8 @@ namespace ScannerGUI2 {
         return tokens;
     }
 
-    void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
-        cout << endl << setw(15) << left << "Identifier" << setw(25) << "Index" << endl;
-        cout << "------------------------" << endl;
 
-        for (const auto& entry : symbolTable) {
-            cout << setw(15) << left << entry.first << setw(25) << entry.second << endl;
-        }
-        cout << endl;
-    }
+
 
     /// <summary>
     /// Summary for MyForm
@@ -485,13 +453,17 @@ private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e
     String^ result = gcnew String("Lexeme\t\tToken\n");
     auto lexIt = lexemes.begin();
     for (const auto& token : tokens) {
-        if (token.second != "") {
-            result += gcnew String((*lexIt + "\t\t<" + *lexIt + ", " + token.second + ">\n").c_str());
+        if (lexIt == lexemes.end()) {
+            throw std::runtime_error("Mismatch between tokens and lexemes sizes");
+        }
+
+        if (!token.second.empty()) {
+            result += gcnew String((*lexIt + "\t\t<" + token.first + ", " + token.second + ">\n").c_str());
         }
         else {
-            result += gcnew String((*lexIt + "\t\t<" + *lexIt + ">\n").c_str());
+            result += gcnew String((*lexIt + "\t\t<" + token.first + ">\n").c_str());
         }
-        ++lexIt;
+        lexIt++;
     }
     // Add errors to the result
     result += gcnew String("\nErrors\n");
