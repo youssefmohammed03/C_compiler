@@ -1,7 +1,8 @@
+
 #include <iostream>
 #include <regex>
 #include <string>
-#include "SyntaxAnalyzer.cpp"
+#include "main.cpp"
 #include <map>
 #include <vector>
 #include <iomanip>
@@ -195,7 +196,7 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                     if (code[j] == '\"' && code[j - 1] != '\\') {
                         break;
                     }
-                    temp += code[j++]; 
+                    temp += code[j++];
                 }
                 if (j < code.size()) {
                     temp += code[j++];
@@ -214,7 +215,7 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                 }
                 i = j - 1;
                 tokens.push_back(make_pair(temp, "char"));
-                lexemes.push_back(temp);                
+                lexemes.push_back(temp);
             }
             else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
                 numbersDetector(temp, code, i, tokens);
@@ -259,70 +260,8 @@ void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
 }
 
 int main() {
-    string code = R"(#include <iostream>
-    #include <vector>
-
-    /* This is a
-    multi-line comment */
-
-    // This is a single line comment
-
-    int main(){
-        // Variable declarations
-        int a=10,b=20;
-        float c=3.14;
-        char d='d';
-        std::string str="Hello, \"World!";
-        std::vector<int> vec={1,2,3,4,5};
-
-        // Arithmetic operations
-        int sum=a+b;
-        int diff=a-b;
-        int prod=a*b;
-        int quot=b/a;
-        int rem=b%a;
-
-        // Boolean expressions
-        bool less=a<b;
-        bool greater = a > b;
-        bool equal = a==b;
-        bool notEqual = a != b;
-
-        // Control structures
-        if (a <b) {
-            printf("a is less than b\n");
-        } else {
-            printf("a is greater than or equal to b\n");
-        }
-
-        for (int i = 0; i < 5; i++) {
-            printf("i = %d\n", i);
-        }
-
-        int hex = 0x1AB32;
-        int oct = 0123;
-        int bin = 0b1010;
-        int dec = 123;
-        float f = 1.23;
-        double d = 1.23;
-
-        // Bitwise operations
-        a<<=1;
-        b >>= 1;
-
-        return 0;
-
-        12
-        0x12abc
-        0b1010
-        0123
-        1.23
-        -1.23
-        int 123abc;
-        0123
-        myname3343434
-
-    })";
+    string code = R"(if(){}
+                     else if(){})";
 
     string preprocessors = extractPreprocessors(code);
     string noComments = removeComments(code);
@@ -340,6 +279,7 @@ int main() {
 
     SyntaxAnalyzer syntaxAnalyzer(tokens);
 
+    syntaxAnalyzer.parse();
 
 
 
