@@ -1,10 +1,13 @@
 #include <iostream>
 #include <regex>
 #include <string>
+#include "SyntaxAnalyzer.cpp"
 #include <map>
 #include <vector>
 #include <iomanip>
 using namespace std;
+
+
 
 vector<string> errors;
 vector<string> lexemes;
@@ -334,6 +337,10 @@ int main() {
     printErrors();
 
     printLexemes();
+
+    SyntaxAnalyzer syntaxAnalyzer(tokens);
+
+
 
 
     return 0;
