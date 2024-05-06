@@ -36,38 +36,66 @@ public:
         }
     }
 
+    void single_statement() {
+        if (look_ahead.first == "number" || look_ahead.first == "id") {
+            if(look_ahead.first == "id" && tokens[currentTokenIndex + 1].first == "(") function_call();
+            expression();
+        } else if (look_ahead.first == "if" || look_ahead.first == "switch") {
+            conditional_statements();
+        } else {
+            throw std::runtime_error("Unexpected token in single_statement: " + look_ahead.first);
+        }
+    }
+
     void parse() {
         while (currentTokenIndex < tokens.size()) {
             if(look_ahead.first == "Success" && look_ahead.second == "Tokens are finished"){
             cout << "Parsing completed successfully" << endl;
             return;
             }
-            arithmetic_expr();
-            assignment_expr();
+            single_statement();
+        }
+    }
+
+    void expression() {
+        string s = tokens[currentTokenIndex + 1].first;
+        if(look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||"){
             boolean_expr();
+        } else if(s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||"){
+            boolean_expr();
+        } else if (s == "=" || s == "+=" || s == "-=" || s == "*=" || s == "/=" || s == "%=" || s == "&=" || s == "|=" || s == "^=" || s == "<<=" || s == ">>="){
+            assignment_expr();
+        } else{
+            arithmetic_expr();
         }
     }
 
     void arithmetic_expr() {
+        //arithmetic_expr -> arithmetic_expr arithmetic_op arithmetic_expr; | variable
+        variable();
         if (look_ahead.first == "id") {
             variable();
-        } else {
-            arithmetic_expr();
-            arithmetic_op();
-            arithmetic_expr();
         }
+        arithmetic_op();
+        arithmetic_expr();
+        match(";");
+        
     }
 
     void arithmetic_op() {
         // Arithmetic_op -> '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' | '<<' | '>>'
         if (look_ahead.first == "+" || look_ahead.first == "-" || look_ahead.first == "*" || look_ahead.first == "/" || look_ahead.first == "%" || look_ahead.first == "&" || look_ahead.first == "|" || look_ahead.first == "^" || look_ahead.first == "<<" || look_ahead.first == ">>") {
-            look_ahead = getNextToken();
+            try{
+                match(look_ahead.first);
+            } catch (exception e){
+                cout << e.what() << endl;
+            }
         }
     }
 
     void boolean_expr() {
         // Boolean_expr -> variable boolean_op variable | boolean_op variable
-        if (isalpha(look_ahead.first[0]) || look_ahead.first[0] == '_' || look_ahead.first == "number") {
+        if (look_ahead.first == "id" || look_ahead.first == "number") {
             variable();
             boolean_op();
             variable();
@@ -80,7 +108,11 @@ public:
     void boolean_op() {
         // Boolean_op -> '==' | '!=' | '>' | '<' | '>=' | '<=' | '!' | '&&' | '||'
         if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
-            look_ahead = getNextToken();
+            try{
+                match(look_ahead.first);
+            }catch (exception e){
+                cout << e.what() << endl;
+            }
         }
     }
 
@@ -88,33 +120,88 @@ public:
         // assignment_expr -> variable assignment_op variable | variable assignment_op arithmetic_expr | variable assignment_op boolean_expr
         variable();
         assignment_op();
-        if (look_ahead.first == "number" || look_ahead.first == "id") {
-            variable();
-        } else if (look_ahead.first == "arithmetic_expr") {
-            arithmetic_expr();
-        } else if (look_ahead.first == "boolean_expr") {
+        string s = tokens[currentTokenIndex + 1].first;
+        if(look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||"){
             boolean_expr();
+        } else if(s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||"){
+            boolean_expr();
+        } else if(look_ahead.first == "id" || look_ahead.first == "number"){
+            variable();
+        } else{
+            arithmetic_expr();
         }
+        match(";");
     }
 
     void assignment_op() {
         // Assignment_op -> '='| '+=' | '-=' | '*=' | '/=' | '%='| '&='| '|='| '^='| '<<=' | '>>='
         if (look_ahead.first == "=" || look_ahead.first == "+=" || look_ahead.first == "-=" || look_ahead.first == "*=" || look_ahead.first == "/=" || look_ahead.first == "%=" || look_ahead.first == "&=" || look_ahead.first == "|=" || look_ahead.first == "^=" || look_ahead.first == "<<=" || look_ahead.first == ">>=") {
-            look_ahead = getNextToken();
+            try{
+                match(look_ahead.first);
+            } catch (exception e){
+                cout << e.what() << endl;
+            }
         }
     }
 
     void variable() {
         // Variable -> number | id
         if (look_ahead.first == "number") {
-            look_ahead = getNextToken();
+            try{
+                match("number");
+            } catch (exception e){
+                cout << e.what() << endl;
+            }
         } else if (look_ahead.first == "id") {
-            look_ahead = getNextToken();
+            try{
+                match("id");
+            } catch (exception e){
+                cout << e.what() << endl;
+            }
+        }
+    }
+
+    void function_call() {
+        // function_call -> id ( arguments ) ;
+        if (look_ahead.first == "id") {
+            try {
+                match("id");
+                match("(");
+                arguments();
+                match(")");
+                match(";");
+            } catch (exception e) {
+                cout << e.what() << endl;
+            }
+        }
+    }
+
+    void arguments() {
+        // arguments -> arg_expression | arg_expression , arguments | ε
+        if (look_ahead.first == "id" || look_ahead.first == "number" || look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+            arg_expression();
+            if (look_ahead.first == ",") {
+                match(",");
+                arguments();
+            }
+        } else {
+            return;
+        }
+    }
+
+    void arg_expression() {
+        // arg_expression -> arithmetic_expr | boolean_expr
+        string s = tokens[currentTokenIndex + 1].first;
+        if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+            boolean_expr();
+        } else if(s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||"){
+            boolean_expr();
+        } else {
+            arithmetic_expr();
         }
     }
 
     void conditional_statements() {
-        // Implement according to your grammar
         // Conditional_statements -> if_expr | switch_expr
         if (look_ahead.first == "if") {
             if_expr();
