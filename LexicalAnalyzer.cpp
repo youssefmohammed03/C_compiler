@@ -1,8 +1,7 @@
-
 #include <iostream>
 #include <regex>
 #include <string>
-#include "main.cpp"
+#include "SyntaxAnalyzer.cpp"
 #include <map>
 #include <vector>
 #include <iomanip>
@@ -22,7 +21,7 @@ regex boolPattern("(\\=\\=|\\!\\=|\\<\\=|\\>\\=|([^\\>]|^)\\>([^\\>]|$)|([^\\<]|
 regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
 regex punctuationPattern("(\\?|\\-\\>|\\:\\:|\\{|\\}|\\(|\\)|\\[|\\]|\\;|\\,|\\.|\\:)");
 regex identifierPattern("^[_a-zA-Z][_a-zA-Z0-9]*$");
-regex decimal_regex("^[-+]?[1-9][0-9]\\.?[0-9]$");
+regex decimal_regex("^[-+]?[1-9][0-9]*\\.?[0-9]*$");
 regex binary_regex("^0b[01]+$");
 regex octal_regex("^0[0-7]*$");
 regex hex_regex("^0x[a-fA-F0-9]+$");
@@ -157,19 +156,19 @@ void numbersDetector(string& temp, const string& code, int& i, vector<pair<strin
     }
 
     if (regex_match(number, decimal_regex)) {
-        tokens.push_back(make_pair(number, "decimal number"));
+        tokens.push_back(make_pair("number", number));
         lexemes.push_back(number);
     }
     else if (regex_match(number, binary_regex)) {
-        tokens.push_back(make_pair(number, "binary number"));
+        tokens.push_back(make_pair("number", number));
         lexemes.push_back(number);
     }
     else if (regex_match(number, octal_regex)) {
-        tokens.push_back(make_pair(number, "octal number"));
+        tokens.push_back(make_pair("number", number));
         lexemes.push_back(number);
     }
     else if (regex_match(number, hex_regex)) {
-        tokens.push_back(make_pair(number, "hexadecimal number"));
+        tokens.push_back(make_pair("number", number));
         lexemes.push_back(number);
     }
     else {
@@ -232,10 +231,12 @@ vector<pair<string, string>> analyzeCode(const string& code) {
                 temp.clear();
             }
         }
-        else if (isdigit(c) && (temp.empty() || isdigit(temp[0]))) {
-            temp += c;
-            numbersDetector(temp, code, i, tokens);
-            temp.clear();
+        else if (isdigit(c)) {
+            if(temp.empty() || isdigit(temp[0])){
+                temp += c;
+                numbersDetector(temp, code, i, tokens);
+                temp.clear();
+            }
         }
         else {
             temp += c;
@@ -260,8 +261,7 @@ void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
 }
 
 int main() {
-    string code = R"(if(){}
-                     else if(){})";
+    string code = R"(3 + 3)";
 
     string preprocessors = extractPreprocessors(code);
     string noComments = removeComments(code);
@@ -271,11 +271,11 @@ int main() {
 
     printTokens(tokens);
 
-    printSymbolTable(symbolTableVector);
+    //printSymbolTable(symbolTableVector);
 
-    printErrors();
+    //printErrors();
 
-    printLexemes();
+    //printLexemes();
 
     SyntaxAnalyzer syntaxAnalyzer(tokens);
 
