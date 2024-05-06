@@ -38,10 +38,15 @@ public:
 
     void single_statement() {
         if (look_ahead.first == "number" || look_ahead.first == "id") {
-            if(look_ahead.first == "id" && tokens[currentTokenIndex + 1].first == "(") function_call();
-            expression();
+            if(look_ahead.first == "id" && tokens[currentTokenIndex + 1].first == "(") {
+                function_call();
+            } else {
+                expression();
+            }
         } else if (look_ahead.first == "if" || look_ahead.first == "switch") {
             conditional_statements();
+        } else if(look_ahead.first == "return"){
+            return_statement();
         } else {
             throw std::runtime_error("Unexpected token in single_statement: " + look_ahead.first);
         }
@@ -196,8 +201,33 @@ public:
             boolean_expr();
         } else if(s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||"){
             boolean_expr();
-        } else {
+        } else if(s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>"){ 
             arithmetic_expr();
+        } else{
+            variable();
+        }
+    }
+
+    void return_statement() {
+        // return_statement  -> return return_expr ;
+        match("return");
+        return_expr();
+        match(";");
+    }
+
+    void return_expr() {
+        // return_expr -> arithmetic_expr | boolean_expr | 1 | 0 | ε
+        string s = tokens[currentTokenIndex + 1].first;
+        if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+            boolean_expr();
+        } else if(s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||"){
+            boolean_expr();
+        } else if(s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>"){ 
+            arithmetic_expr();
+        } else if(look_ahead.first == "1" || look_ahead.first == "0"){
+            match(look_ahead.first);
+        } else{
+            variable();
         }
     }
 
@@ -210,8 +240,18 @@ public:
         }
     }
 
+    void body() {
+        // body -> single_statement body | ε
+        if (look_ahead.first == "single_statement") {
+            single_statement();
+            body();
+        } else{
+            return;
+        }
+    }
+
     void if_expr() {
-        // If_expr -> if (boolean_expr) {body} else_expr | if (boolean_expr) single_statement else_expr
+        // if_expr -> if (boolean_expr) {body} else_expr | if (boolean_expr) single_statement else_expr
         match("if");
         match("(");
         boolean_expr();
