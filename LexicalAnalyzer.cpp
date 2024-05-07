@@ -15,7 +15,7 @@ vector<pair<string, string>> symbolTableVector;
 int counter = 0;
 
 regex keywordPattern("\\b(alignas|alignof|auto|bool|break|case|const|constexpr|continue|default|do|else|enum|extern|false|for|goto|if|inline|register|restrict|return|signed|sizeof|static|static_assert|struct|switch|thread_local|true|typedef|typeof|typeof_unqual|union|unsigned|void|volatile|while|_Alignas|_Alignof|_Atomic|_Bool|_Complex|_Decimal128|_Decimal32|_Decimal64|_Generic|_Imaginary|_Noreturn|_Static_assert|_Thread_local)\\b");
-regex dataTypePattern("\\b(char|double|float|int|long|short|signed|unsigned|void)\\b");
+regex dataTypePattern("\\b(char|double|float|int|long|short|signed|unsigned|void|string)\\b");
 regex arithPattern("(\\+\\+|\\-\\-|\\+|\\-|\\*|\\/|\\%|\\~|\\<\\<|\\>\\>|\\^|([^\\&]|^)\\&([^\\&]|$)|([^\\|]|^)\\|([^\\|]|$))");
 regex boolPattern("(\\=\\=|\\!\\=|\\<\\=|\\>\\=|([^\\>]|^)\\>([^\\>]|$)|([^\\<]|^)\\<([^\\<]|$)|\\!|\\&\\&|\\|\\|)");
 regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
@@ -262,19 +262,7 @@ void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
 
 int main() {
     string code = R"(
-        switch (x) {
-            case "sfd":
-                y = 2;
-            default:
-                y = 5;
-                break;
-        }
-        if (x == 5) {
-            y = 2;
-        }
-        else {
-            y = 5;
-        }
+        int = 4; 
     )";
 
     string preprocessors = extractPreprocessors(code);

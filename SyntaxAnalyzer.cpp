@@ -42,7 +42,19 @@ public:
     }
 
     void single_statement(ParseTreeNode *parent) {
-        if (look_ahead.first == "number" || look_ahead.first == "id") {
+        if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned" || look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
+            temp = new ParseTreeNode("variable_declaration");
+            parent->addChild(temp);
+            variable_declaration(temp);
+        } else if (look_ahead.first == "if" || look_ahead.first == "switch") {
+            temp = new ParseTreeNode("conditional_statement");
+            parent->addChild(temp);
+            conditional_statements(temp);
+        } else if(look_ahead.first == "return"){
+            temp = new ParseTreeNode("return_statement");
+            parent->addChild(temp);
+            return_statement(temp);
+        } else if(look_ahead.first == "number" || look_ahead.first == "id"){
             if(look_ahead.first == "id" && tokens[currentTokenIndex + 1].first == "(") {
                 temp = new ParseTreeNode("function_call");
                 parent->addChild(temp);
@@ -52,14 +64,6 @@ public:
                 parent->addChild(temp);
                 expression(temp);
             }
-        } else if (look_ahead.first == "if" || look_ahead.first == "switch") {
-            temp = new ParseTreeNode("conditional_statement");
-            parent->addChild(temp);
-            conditional_statements(temp);
-        } else if(look_ahead.first == "return"){
-            temp = new ParseTreeNode("return_statement");
-            parent->addChild(temp);
-            return_statement(temp);
         } else {
             throw std::runtime_error("Unexpected token in single_statement: " + look_ahead.first);
         }
@@ -99,7 +103,7 @@ public:
     }
 
     void arithmetic_expr(ParseTreeNode *parent) {
-        match(look_ahead.first, parent);
+        variable(parent);
         temp = new ParseTreeNode("sub_arithmetic_expr");
         parent->addChild(temp);
         sub_arithmetic_expr (temp);
@@ -319,8 +323,8 @@ public:
 
     void sub_body(ParseTreeNode *parent) {
         // sub_body -> body | ε
-        //int | float | double | char | String | long | short | signed | unsigned
-        if (look_ahead.first == "if" || look_ahead.first == "while" || look_ahead.first == "for" || look_ahead.first == "switch" || look_ahead.first == "return" || look_ahead.first == "id" || look_ahead.first == "do" || look_ahead.first == "enum" || look_ahead.first == "struct" || look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "String" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned") {
+        //int | float | double | char | string | long | short | signed | unsigned
+        if (look_ahead.first == "if" || look_ahead.first == "while" || look_ahead.first == "for" || look_ahead.first == "switch" || look_ahead.first == "return" || look_ahead.first == "id" || look_ahead.first == "do" || look_ahead.first == "enum" || look_ahead.first == "struct" || look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned") {
             temp = new ParseTreeNode("body");
             parent->addChild(temp);
             body(temp);
@@ -402,7 +406,9 @@ public:
         // case_expr -> case const : body break; | case const : body | case_expr | ε
         while (look_ahead.first == "case") {
             match("case", parent);
-            match(look_ahead.first, parent);
+            temp = new ParseTreeNode("const_expr");
+            parent->addChild(temp);
+            const_expr(temp);
             match(":", parent);
             temp = new ParseTreeNode("body");
             parent->addChild(temp);
@@ -433,6 +439,78 @@ public:
         // const -> number | string | char
         if (look_ahead.first == "number" || look_ahead.second == "string" || look_ahead.second == "char") {
             match(look_ahead.first, parent);
+        } else{
+            throw std::runtime_error("Unexpected token in const_expr: " + look_ahead.first);
+        }
+    }
+
+    void variable_declaration(ParseTreeNode *parent) {
+        // variable_declaration -> data_type variable_list ;
+        ParseTreeNode* temp = new ParseTreeNode("data_type");
+        parent->addChild(temp);
+        data_type(temp);
+
+        temp = new ParseTreeNode("variable_list");
+        parent->addChild(temp);
+        variable_list(temp);
+
+        match(";", parent);
+    }
+
+    void data_type(ParseTreeNode *parent) {
+        // data_type -> type_modifier type
+        ParseTreeNode* temp = new ParseTreeNode("type_modifier");
+        parent->addChild(temp);
+        type_modifier(temp);
+
+        temp = new ParseTreeNode("type");
+        parent->addChild(temp);
+        type(temp);
+    }
+
+    void type(ParseTreeNode *parent) {
+        // type -> int | float | double | char | string | long | short | signed | unsigned
+        if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" ||
+            look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" ||
+            look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned") {
+            match(look_ahead.first, parent);
+        } else {
+            throw std::runtime_error("Unexpected token in type: " + look_ahead.first);
+        }
+    }
+
+    void type_modifier(ParseTreeNode *parent) {
+        // type_modifier -> const | volatile | restrict | ε
+        if (look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
+            match(look_ahead.first, parent);
+        }
+    }
+
+    void variable_list(ParseTreeNode *parent) {
+        // variable_list -> id equal_assign | id equal_assign, variable_list
+        match("id", parent);
+        temp = new ParseTreeNode("equal_assign");
+        parent->addChild(temp);
+        equal_assign(temp);
+        if (look_ahead.first == ",") {
+            match(",", parent);
+            temp = new ParseTreeNode("variable_list");
+            parent->addChild(temp);
+            variable_list(temp);
+        }
+    }
+
+    void equal_assign(ParseTreeNode *parent) {
+        // equal_assign -> = const | = id | ε
+        if (look_ahead.first == "=") {
+            match("=" , parent);
+            if(look_ahead.first == "number" || look_ahead.second == "string" || look_ahead.second == "char"){
+                temp = new ParseTreeNode("const_expr");
+                parent->addChild(temp);
+                const_expr(temp);
+            } else{
+                match("id", parent);
+            }
         }
     }
 
