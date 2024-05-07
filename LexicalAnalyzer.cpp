@@ -269,6 +269,12 @@ int main() {
                 y = 5;
                 break;
         }
+        if (x == 5) {
+            y = 2;
+        }
+        else {
+            y = 5;
+        }
     )";
 
     string preprocessors = extractPreprocessors(code);
