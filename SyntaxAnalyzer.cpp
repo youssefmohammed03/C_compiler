@@ -76,15 +76,15 @@ public:
     }
 
     void arithmetic_expr() {
-        //arithmetic_expr -> arithmetic_expr arithmetic_op arithmetic_expr; | variable
-        variable();
-        if (look_ahead.first == "id") {
-            variable();
+        match(look_ahead.first);
+        sub_arithmetic_expr ();
+    }
+
+    void sub_arithmetic_expr () {
+        if (look_ahead.first == "+" || look_ahead.first == "-" || look_ahead.first == "*" || look_ahead.first == "/" || look_ahead.first == "%" || look_ahead.first == "&" || look_ahead.first == "|" || look_ahead.first == "^" || look_ahead.first == "<<" || look_ahead.first == ">>") {
+            arithmetic_op();
+            arithmetic_expr();
         }
-        arithmetic_op();
-        arithmetic_expr();
-        match(";");
-        
     }
 
     void arithmetic_op() {
@@ -130,10 +130,12 @@ public:
             boolean_expr();
         } else if(s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||"){
             boolean_expr();
-        } else if(look_ahead.first == "id" || look_ahead.first == "number"){
-            variable();
         } else{
-            arithmetic_expr();
+            if(s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>"){
+                arithmetic_expr();
+            } else{
+                variable();
+            }
         }
         match(";");
     }
@@ -232,7 +234,7 @@ public:
     }
 
     void conditional_statements() {
-        // Conditional_statements -> if_expr | switch_expr
+        // conditional_statements -> if_expr | switch_expr
         if (look_ahead.first == "if") {
             if_expr();
         } else if (look_ahead.first == "switch") {
@@ -241,12 +243,16 @@ public:
     }
 
     void body() {
-        // body -> single_statement body | ε
-        if (look_ahead.first == "single_statement") {
-            single_statement();
+        //body -> single_statement sub_body
+        single_statement();
+        sub_body();
+    }
+
+    void sub_body() {
+        // sub_body -> body | ε
+        //int | float | double | char | String | long | short | signed | unsigned
+        if (look_ahead.first == "if" || look_ahead.first == "while" || look_ahead.first == "for" || look_ahead.first == "switch" || look_ahead.first == "return" || look_ahead.first == "id" || look_ahead.first == "do" || look_ahead.first == "enum" || look_ahead.first == "struct" || look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "String" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned") {
             body();
-        } else{
-            return;
         }
     }
 
@@ -254,72 +260,87 @@ public:
         // if_expr -> if (boolean_expr) {body} else_expr | if (boolean_expr) single_statement else_expr
         match("if");
         match("(");
-        boolean_expr();
+        string s = tokens[currentTokenIndex + 1].first;
+        if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+            boolean_expr();
+        } else if(s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||"){
+            boolean_expr();
+        } else{
+            variable();
+        }
         match(")");
-        match("{");
-        match("}");
+        if (look_ahead.first == "{") {
+            match("{");
+            body();
+            match("}");
+        } else {
+            single_statement();
+        }
+        else_expr();
     }
 
     void else_expr() {
-        // Else_expr -> else {body} | else if (boolean_expr) {body} | else_expr |else single_ statement | else if (boolean_expr) single_statement | ε
+        // else_expr -> else {body} | else single_statement | ε
         if (look_ahead.first == "else") {
-            look_ahead = getNextToken();
-            if (look_ahead.first == "if") {
-                match("(");
-                boolean_expr();
-                match(")");
-                look_ahead = getNextToken();
-                if (look_ahead.first == "{") {
-//                    body();
-                    match("}");
-                } else {
-//                    single_statement();
-                }
-            } else if (look_ahead.first == "{") {
-//                body();
+            match("else");
+            if (look_ahead.first == "{") {
+                match("{");
+                body();
                 match("}");
             } else {
-//                single_statement();
+                single_statement();
             }
         }
     }
 
     void switch_expr() {
-        // Switch_expr -> switch(ID) { case_expr default_expr } | switch(ID) {body case_expr default_expr}
+        // switch_expr -> switch(id) { case_expr default_expr }
         match("switch");
         match("(");
         match("id");
         match(")");
         match("{");
-        case_expr();
-        default_expr();
+        if (look_ahead.first == "case") {
+            case_expr();
+        }
+        if (look_ahead.first == "default") {
+            default_expr();
+        }
         match("}");
     }
 
     void case_expr() {
-        // Case_expr -> case const : body break; | case const : body | case_expr | ε
-        while (look_ahead.first == "CASE") {
-            match("CONST");
+        // case_expr -> case const : body break; | case const : body | case_expr | ε
+        while (look_ahead.first == "case") {
+            match("case");
+            match(look_ahead.first);
             match(":");
-//            body();
-            look_ahead = getNextToken();
-            if (look_ahead.first == "BREAK") {
+            body();
+            if (look_ahead.first == "break") {
+                match("break");
                 match(";");
             }
-            look_ahead = getNextToken();
         }
     }
 
     void default_expr() {
-        // Default_expr -> default: body | default: body break;
-        match("DEFAULT");
-        match(":");
-//        body();
-        look_ahead = getNextToken();
-        if (look_ahead.first == "BREAK") {
-            match(";");
+        // default_expr -> default: body | default: body break;
+        if (look_ahead.first == "default") {
+            match("default");
+            match(":");
+            body();
+            if (look_ahead.first == "break") {
+                match("break");
+                match(";");
+            }
         }
     }
 
+    void const_expr() {
+        // const -> number | string | char
+        if (look_ahead.first == "number" || look_ahead.second == "string" || look_ahead.second == "char") {
+            match(look_ahead.first);
+        }
+    }
 
 };

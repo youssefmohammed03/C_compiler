@@ -262,11 +262,13 @@ void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
 
 int main() {
     string code = R"(
-        return ;
-        return 0;
-        return a;
-        return !a;
-        return a && b;
+        switch (x) {
+            case "sfd":
+                y = 2;
+            default:
+                y = 5;
+                break;
+        }
     )";
 
     string preprocessors = extractPreprocessors(code);
