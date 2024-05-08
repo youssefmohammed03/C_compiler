@@ -23,16 +23,17 @@ public:
     }
 
     void printTree(int level = 0) {
-    // Print indentation
-    for (int i = 0; i < level; i++) {
-        std::cout << "  ";
-    }
-
-    // Print node type
-    std::cout << type;
-
-    // Print children
+    // Only print nodes that have children
     if (!children.empty()) {
+        // Print indentation
+        for (int i = 0; i < level; i++) {
+            std::cout << "  ";
+        }
+
+        // Print node type
+        std::cout << type;
+
+        // Print children
         std::cout << " -> { ";
         for (size_t i = 0; i < children.size(); i++) {
             std::cout << children[i]->type;
@@ -41,13 +42,13 @@ public:
             }
         }
         std::cout << " }";
-    }
 
-    std::cout << std::endl;
+        std::cout << std::endl;
 
-    // Recursively print children's trees
-    for (ParseTreeNode* child : children) {
-        child->printTree(level + 1);
+        // Recursively print children's trees
+        for (ParseTreeNode* child : children) {
+            child->printTree(level + 1);
+        }
     }
 }
 };
