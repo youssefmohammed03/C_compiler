@@ -70,6 +70,10 @@ public:
                 parent->addChild(temp);
                 expression(temp);
             }
+        }else if(look_ahead.first == "do" || look_ahead.first == "while" || look_ahead.first == "for"){
+            temp = new ParseTreeNode("Iterative_statement");
+            parent->addChild(temp);
+            Iterative_statement(temp);
         } else {
             throw std::runtime_error("Unexpected token in single_statement: " + look_ahead.first);
         }
@@ -304,6 +308,25 @@ public:
         }
     }
 
+    void Iterative_statement(ParseTreeNode *parent) {
+     //Iterative_Statements-> for_loop | while_loop | do_while_loop
+     if(look_ahead.first=="for"){
+            temp = new ParseTreeNode("for_loop");
+            parent->addChild(temp);
+            for_loop(temp);
+        }
+        else if(look_ahead.first=="while"){
+            temp = new ParseTreeNode("while_loop");
+            parent->addChild(temp);
+            while_loop(temp);
+        }
+        else if(look_ahead.first=="do"){
+            temp = new ParseTreeNode("do_while_loop");
+            parent->addChild(temp);
+            do_while_loop(temp);
+        }
+
+    }
     void conditional_statements(ParseTreeNode *parent) {
         // conditional_statements -> if_expr | switch_expr
         if (look_ahead.first == "if") {
@@ -337,6 +360,88 @@ public:
         }
     }
 
+    void for_loop(ParseTreeNode *parent) {
+        // for_loop -> for (init_expr; condition_expr; update_expr) { body}
+        match("for", parent);                       
+        match("(", parent);
+        temp = new ParseTreeNode("init_expr");
+        parent->addChild(temp);
+        init_expr(temp);
+        match(";", parent);
+        temp = new ParseTreeNode("condition_expr");
+        parent->addChild(temp);
+        condition_expr(temp);
+        match(";", parent);
+        temp = new ParseTreeNode("update_expr");
+        parent->addChild(temp);
+        update_expr(temp);
+        match(")", parent);
+        match("{", parent);
+        temp = new ParseTreeNode("body");
+        parent->addChild(temp);
+        body(temp);
+        match("}", parent);
+    }
+    
+    void init_expr(ParseTreeNode *parent) {
+        // init_expr -> expression | ε
+        if (look_ahead.first == "id" || look_ahead.first == "number") {
+            temp = new ParseTreeNode("expression");
+            parent->addChild(temp);
+            expression(temp);
+        }
+    }
+
+    void condition_expr(ParseTreeNode *parent) {
+        // condition_expr -> boolean_expr | ε
+        if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+            temp = new ParseTreeNode("boolean_expr");
+            parent->addChild(temp);
+            boolean_expr(temp);
+        }
+    }
+
+    void update_expr(ParseTreeNode *parent) {
+        // update_expr -> assignment_expr | ε
+        if (look_ahead.first == "id" || look_ahead.first == "number") {
+            temp = new ParseTreeNode("assignment_expr");
+            parent->addChild(temp);
+            assignment_expr(temp);
+        }
+    }
+
+    void while_loop(ParseTreeNode *parent) {
+        // while_loop -> while (condition_expr) { body }
+        match("while", parent);
+        match("(", parent);
+        temp = new ParseTreeNode("condition_expr");
+        parent->addChild(temp);
+        condition_expr(temp);
+        match(")", parent);
+        match("{", parent);
+        temp = new ParseTreeNode("body");
+        parent->addChild(temp);
+        body(temp);
+        match("}", parent);
+    }
+
+    void do_while_loop(ParseTreeNode *parent) {
+        // do_while_loop -> do { body } while (condition_expr) ;
+        match("do", parent);
+        match("{", parent);
+        temp = new ParseTreeNode("body");
+        parent->addChild(temp);
+        body(temp);
+        match("}", parent);
+        match("while", parent);
+        match("(", parent);
+        temp = new ParseTreeNode("condition_expr");
+        parent->addChild(temp);
+        condition_expr(temp);
+        match(")", parent);
+        match(";", parent);
+    }
+    
     void if_expr(ParseTreeNode *parent) {
         // if_expr -> if (boolean_expr) {body} else_expr | if (boolean_expr) single_statement else_expr
         match("if", parent);

@@ -262,10 +262,13 @@ void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
 
 int main() {
     string code = R"(
-        int df(int a, int b){
-            a=5;
+        // Testing for loop
+        for (int j = 0; j < 3; j++) {
+            cout << "for loop iteration " << j << endl;
         }
     )";
+
+
 
     string preprocessors = extractPreprocessors(code);
     string noComments = removeComments(code);
