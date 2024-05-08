@@ -1,0 +1,55 @@
+ main -> {
+   conditional_statement -> {
+     switch_expr -> {
+       switch
+       (
+       id
+       )
+       {
+       case_expr -> {
+         case
+         const_expr -> {
+           "sfd"
+}
+         :
+         body -> {
+           single_statement -> {
+             expression -> {
+               assignment_expr -> {
+                 id
+                 assignment_op -> {
+                   =
+}
+                 number
+                 ;
+}
+}
+}
+           sub_body
+}
+}
+       default_expr -> {
+         default
+         :
+         body -> {
+           single_statement -> {
+             expression -> {
+               assignment_expr -> {
+                 id
+                 assignment_op -> {
+                   =
+}
+                 number
+                 ;
+}
+}
+}
+           sub_body
+}
+         break
+         ;
+}
+       }
+}
+}
+}
