@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <msclr/marshal_cppstd.h> 
@@ -11,6 +11,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include "ParserTreeNode.h"
 
 using namespace std;
 
@@ -24,10 +25,15 @@ namespace ScannerGUI2 {
     vector<string> errors;
     vector<string> lexemes;
     vector<pair<string, string>> symbolTableVector;
+    vector<pair<string, string>> tokens;
+    ParseTreeNode* root;
+    ParseTreeNode* temp;
+    int currentTokenIndex;
+    pair<string, string> look_ahead;
     int counter = 0;
 
     regex keywordPattern("\\b(alignas|alignof|auto|bool|break|case|const|constexpr|continue|default|do|else|enum|extern|false|for|goto|if|inline|register|restrict|return|signed|sizeof|static|static_assert|struct|switch|thread_local|true|typedef|typeof|typeof_unqual|union|unsigned|void|volatile|while|_Alignas|_Alignof|_Atomic|_Bool|_Complex|_Decimal128|_Decimal32|_Decimal64|_Generic|_Imaginary|_Noreturn|_Static_assert|_Thread_local)\\b");
-    regex dataTypePattern("\\b(char|double|float|int|long|short|signed|unsigned|void)\\b");
+    regex dataTypePattern("\\b(char|double|float|int|long|short|signed|unsigned|void|string)\\b");
     regex arithPattern("(\\+\\+|\\-\\-|\\+|\\-|\\*|\\/|\\%|\\~|\\<\\<|\\>\\>|\\^|([^\\&]|^)\\&([^\\&]|$)|([^\\|]|^)\\|([^\\|]|$))");
     regex boolPattern("(\\=\\=|\\!\\=|\\<\\=|\\>\\=|([^\\>]|^)\\>([^\\>]|$)|([^\\<]|^)\\<([^\\<]|$)|\\!|\\&\\&|\\|\\|)");
     regex assignmentPattern("((\\+=)|(-=)|(\\*=)|(\\/=)|(\\%=)|(&=)|(\\|=)|(\\^=)|(<<=)|(>>=)|(=))");
@@ -40,6 +46,31 @@ namespace ScannerGUI2 {
     regex string_regex("\"(\\\\.|[^\"])*\"");
     regex char_regex("'(\\\\.|[^'])*'");
 
+    void printTokens(const vector<pair<string, string>>& tokens) {
+        cout << "Tokens\n";
+        for (const auto& token : tokens) {
+            if (token.second != "") {
+                cout << "<" << token.first << ", " << token.second << ">" << "\n";
+            }
+            else {
+                cout << "<" << token.first << ">" << "\n";
+            }
+        }
+    }
+
+    void printErrors() {
+        cout << "Errors\n";
+        for (const auto& element : errors) {
+            cout << element << endl;
+        }
+    }
+
+    void printLexemes() {
+        cout << "Lexemes\n";
+        for (const string& lex : lexemes) {
+            cout << lex << endl;
+        }
+    }
 
     string removeComments(string code) {
         regex commentPattern("(\\/\\*([^*]|[\r\n]|(\\*+([^*/]|[\r\n])))*\\*\\/)|(\\/\\/.*)|#[^\\n]*");
@@ -109,6 +140,7 @@ namespace ScannerGUI2 {
             }
             else {
                 errors.push_back(temp);
+                lexemes.push_back(temp);
             }
         }
     }
@@ -143,23 +175,24 @@ namespace ScannerGUI2 {
         }
 
         if (regex_match(number, decimal_regex)) {
-            tokens.push_back(make_pair(number, "decimal number"));
+            tokens.push_back(make_pair("number", number));
             lexemes.push_back(number);
         }
         else if (regex_match(number, binary_regex)) {
-            tokens.push_back(make_pair(number, "binary number"));
+            tokens.push_back(make_pair("number", number));
             lexemes.push_back(number);
         }
         else if (regex_match(number, octal_regex)) {
-            tokens.push_back(make_pair(number, "octal number"));
+            tokens.push_back(make_pair("number", number));
             lexemes.push_back(number);
         }
         else if (regex_match(number, hex_regex)) {
-            tokens.push_back(make_pair(number, "hexadecimal number"));
+            tokens.push_back(make_pair("number", number));
             lexemes.push_back(number);
         }
         else {
             errors.push_back(number);
+            lexemes.push_back(number);
         }
     }
 
@@ -200,7 +233,7 @@ namespace ScannerGUI2 {
                     }
                     i = j - 1;
                     tokens.push_back(make_pair(temp, "char"));
-                    lexemes.push_back(temp);    
+                    lexemes.push_back(temp);
                 }
                 else if ((c == '-' || c == '+') && i + 1 < code.size() && isdigit(code[i + 1])) {
                     numbersDetector(temp, code, i, tokens);
@@ -217,10 +250,12 @@ namespace ScannerGUI2 {
                     temp.clear();
                 }
             }
-            else if (isdigit(c) && (temp.empty() || isdigit(temp[0]))) {
-                temp += c;
-                numbersDetector(temp, code, i, tokens);
-                temp.clear();
+            else if (isdigit(c)) {
+                if (temp.empty() || isdigit(temp[0])) {
+                    temp += c;
+                    numbersDetector(temp, code, i, tokens);
+                    temp.clear();
+                }
             }
             else {
                 temp += c;
@@ -235,7 +270,8 @@ namespace ScannerGUI2 {
     }
 
 
-
+    // Define a function to perform the conversion
+ 
 
     /// <summary>
     /// Summary for MyForm
@@ -269,6 +305,8 @@ namespace ScannerGUI2 {
     private: System::Windows::Forms::Label^ label2;
     private: System::Windows::Forms::Button^ updateDictionbutton;
     private: System::Windows::Forms::Label^ label3;
+    private: System::Windows::Forms::Label^ output;
+    private: System::Windows::Forms::Label^ error;
 
     protected:
 
@@ -286,16 +324,20 @@ namespace ScannerGUI2 {
         void InitializeComponent(void)
         {
             this->panel1 = (gcnew System::Windows::Forms::Panel());
+            this->output = (gcnew System::Windows::Forms::Label());
+            this->label3 = (gcnew System::Windows::Forms::Label());
+            this->updateDictionbutton = (gcnew System::Windows::Forms::Button());
             this->button1 = (gcnew System::Windows::Forms::Button());
             this->textBox1 = (gcnew System::Windows::Forms::TextBox());
             this->label2 = (gcnew System::Windows::Forms::Label());
-            this->updateDictionbutton = (gcnew System::Windows::Forms::Button());
-            this->label3 = (gcnew System::Windows::Forms::Label());
+            this->error = (gcnew System::Windows::Forms::Label());
             this->panel1->SuspendLayout();
             this->SuspendLayout();
             // 
             // panel1
             // 
+            this->panel1->Controls->Add(this->error);
+            this->panel1->Controls->Add(this->output);
             this->panel1->Controls->Add(this->label3);
             this->panel1->Controls->Add(this->updateDictionbutton);
             this->panel1->Controls->Add(this->button1);
@@ -305,6 +347,33 @@ namespace ScannerGUI2 {
             this->panel1->Name = L"panel1";
             this->panel1->Size = System::Drawing::Size(620, 426);
             this->panel1->TabIndex = 0;
+            // 
+            // output
+            // 
+            this->output->AutoSize = true;
+            this->output->Location = System::Drawing::Point(34, 300);
+            this->output->Name = L"output";
+            this->output->Size = System::Drawing::Size(44, 16);
+            this->output->TabIndex = 5;
+            this->output->Text = L"label1";
+            // 
+            // label3
+            // 
+            this->label3->AutoSize = true;
+            this->label3->Location = System::Drawing::Point(26, 366);
+            this->label3->Name = L"label3";
+            this->label3->Size = System::Drawing::Size(0, 16);
+            this->label3->TabIndex = 4;
+            // 
+            // updateDictionbutton
+            // 
+            this->updateDictionbutton->Location = System::Drawing::Point(156, 377);
+            this->updateDictionbutton->Name = L"updateDictionbutton";
+            this->updateDictionbutton->Size = System::Drawing::Size(155, 31);
+            this->updateDictionbutton->TabIndex = 3;
+            this->updateDictionbutton->Text = L"Update Dictionary";
+            this->updateDictionbutton->UseVisualStyleBackColor = true;
+            this->updateDictionbutton->Click += gcnew System::EventHandler(this, &MyForm::updateDictionbutton_Click);
             // 
             // button1
             // 
@@ -321,7 +390,7 @@ namespace ScannerGUI2 {
             this->textBox1->Location = System::Drawing::Point(26, 69);
             this->textBox1->Multiline = true;
             this->textBox1->Name = L"textBox1";
-            this->textBox1->Size = System::Drawing::Size(566, 273);
+            this->textBox1->Size = System::Drawing::Size(566, 212);
             this->textBox1->TabIndex = 1;
             // 
             // label2
@@ -329,27 +398,19 @@ namespace ScannerGUI2 {
             this->label2->AutoSize = true;
             this->label2->Location = System::Drawing::Point(23, 28);
             this->label2->Name = L"label2";
-            this->label2->Size = System::Drawing::Size(267, 17);
+            this->label2->Size = System::Drawing::Size(264, 16);
             this->label2->TabIndex = 0;
-            this->label2->Text = L"Enter the code below to analyze its lexemes";
+            this->label2->Text = L"Enter code in the below box to check syntax";
             // 
-            // updateDictionbutton
+            // error
             // 
-            this->updateDictionbutton->Location = System::Drawing::Point(156, 377);
-            this->updateDictionbutton->Name = L"updateDictionbutton";
-            this->updateDictionbutton->Size = System::Drawing::Size(155, 31);
-            this->updateDictionbutton->TabIndex = 3;
-            this->updateDictionbutton->Text = L"Update Dictionary";
-            this->updateDictionbutton->UseVisualStyleBackColor = true;
-            this->updateDictionbutton->Click += gcnew System::EventHandler(this, &MyForm::updateDictionbutton_Click);
-            // 
-            // label3
-            // 
-            this->label3->AutoSize = true;
-            this->label3->Location = System::Drawing::Point(26, 366);
-            this->label3->Name = L"label3";
-            this->label3->Size = System::Drawing::Size(0, 17);
-            this->label3->TabIndex = 4;
+            this->error->AutoSize = true;
+            this->error->ForeColor = System::Drawing::Color::Red;
+            this->error->Location = System::Drawing::Point(34, 329);
+            this->error->Name = L"error";
+            this->error->Size = System::Drawing::Size(44, 16);
+            this->error->TabIndex = 5;
+            this->error->Text = L"label1";
             // 
             // MyForm
             // 
@@ -366,6 +427,7 @@ namespace ScannerGUI2 {
         }
 #pragma endregion
 #include <Windows.h> // Required for MessageBox
+
 
     private: System::Void updateDictionbutton_Click(System::Object^ sender, System::EventArgs^ e) {
         // Open a file dialog for the user to select a text file
@@ -442,6 +504,534 @@ namespace ScannerGUI2 {
         }
     }
 
+           pair<string, string> getNextToken() {
+               if (currentTokenIndex < tokens.size() - 1) {
+                   return tokens[++currentTokenIndex];
+               }
+               else {
+                   return make_pair("Success", "Tokens are finished");
+               }
+           }
+
+           void match(string expectedToken, ParseTreeNode* parent) {
+               if (look_ahead.first == expectedToken) {
+                   temp = new ParseTreeNode(expectedToken);
+                   parent->addChild(temp);
+                   look_ahead = getNextToken();
+               }
+               else {
+                   throw std::runtime_error("Unexpected token: " + look_ahead.first + ". Expected: " + expectedToken);
+               }
+           }
+
+           void single_statement(ParseTreeNode* parent) {
+               if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned" || look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
+                   temp = new ParseTreeNode("variable_declaration");
+                   parent->addChild(temp);
+                   variable_declaration(temp);
+               }
+               else if (look_ahead.first == "if" || look_ahead.first == "switch") {
+                   temp = new ParseTreeNode("conditional_statement");
+                   parent->addChild(temp);
+                   conditional_statements(temp);
+               }
+               else if (look_ahead.first == "return") {
+                   temp = new ParseTreeNode("return_statement");
+                   parent->addChild(temp);
+                   return_statement(temp);
+               }
+               else if (look_ahead.first == "number" || look_ahead.first == "id") {
+                   if (look_ahead.first == "id" && tokens[currentTokenIndex + 1].first == "(") {
+                       temp = new ParseTreeNode("function_call");
+                       parent->addChild(temp);
+                       function_call(temp);
+                   }
+                   else {
+                       temp = new ParseTreeNode("expression");
+                       parent->addChild(temp);
+                       expression(temp);
+                   }
+               }
+               else {
+                   throw std::runtime_error("Unexpected token in single_statement: " + look_ahead.first);
+               }
+           }
+
+           void parse() {
+               root = new ParseTreeNode("main");
+               while (currentTokenIndex < tokens.size()) {
+                   if (look_ahead.first == "Success" && look_ahead.second == "Tokens are finished") {
+                       output->Text = "Parsing completed successfully";
+                       root->printTree();
+                       return;
+                   }
+                   single_statement(root);
+               }
+           }
+
+           void expression(ParseTreeNode* parent) {
+               string s = tokens[currentTokenIndex + 1].first;
+               if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else if (s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else if (s == "=" || s == "+=" || s == "-=" || s == "*=" || s == "/=" || s == "%=" || s == "&=" || s == "|=" || s == "^=" || s == "<<=" || s == ">>=") {
+                   temp = new ParseTreeNode("assignment_expr");
+                   parent->addChild(temp);
+                   assignment_expr(temp);
+               }
+               else {
+                   temp = new ParseTreeNode("arithmetic_expr");
+                   parent->addChild(temp);
+                   arithmetic_expr(temp);
+               }
+           }
+
+           void arithmetic_expr(ParseTreeNode* parent) {
+               variable(parent);
+               temp = new ParseTreeNode("sub_arithmetic_expr");
+               parent->addChild(temp);
+               sub_arithmetic_expr(temp);
+           }
+
+           void sub_arithmetic_expr(ParseTreeNode* parent) {
+               if (look_ahead.first == "+" || look_ahead.first == "-" || look_ahead.first == "*" || look_ahead.first == "/" || look_ahead.first == "%" || look_ahead.first == "&" || look_ahead.first == "|" || look_ahead.first == "^" || look_ahead.first == "<<" || look_ahead.first == ">>") {
+                   temp = new ParseTreeNode("arithmetic_op");
+                   parent->addChild(temp);
+                   arithmetic_op(temp);
+                   temp = new ParseTreeNode("arithmetic_expr");
+                   parent->addChild(temp);
+                   arithmetic_expr(temp);
+               }
+           }
+
+           void arithmetic_op(ParseTreeNode* parent) {
+               // Arithmetic_op -> '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' | '<<' | '>>'
+               if (look_ahead.first == "+" || look_ahead.first == "-" || look_ahead.first == "*" || look_ahead.first == "/" || look_ahead.first == "%" || look_ahead.first == "&" || look_ahead.first == "|" || look_ahead.first == "^" || look_ahead.first == "<<" || look_ahead.first == ">>") {
+                   try {
+                       match(look_ahead.first, parent);
+                   }
+                   catch (exception e) {
+                       cout << e.what() << endl;
+                   }
+               }
+           }
+
+           void boolean_expr(ParseTreeNode* parent) {
+               // Boolean_expr -> variable boolean_op variable | boolean_op variable
+               if (look_ahead.first == "id" || look_ahead.first == "number") {
+                   variable(parent);
+                   temp = new ParseTreeNode("boolean_op");
+                   parent->addChild(temp);
+                   boolean_op(temp);
+                   variable(parent);
+               }
+               else {
+                   temp = new ParseTreeNode("boolean_op");
+                   parent->addChild(temp);
+                   boolean_op(temp);
+                   variable(parent);
+               }
+           }
+
+           void boolean_op(ParseTreeNode* parent) {
+               // Boolean_op -> '==' | '!=' | '>' | '<' | '>=' | '<=' | '!' | '&&' | '||'
+               if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+                   try {
+                       match(look_ahead.first, parent);
+                   }
+                   catch (exception e) {
+                       cout << e.what() << endl;
+                   }
+               }
+           }
+
+           void assignment_expr(ParseTreeNode* parent) {
+               // assignment_expr -> variable assignment_op variable | variable assignment_op arithmetic_expr | variable assignment_op boolean_expr
+               variable(parent);
+               temp = new ParseTreeNode("assignment_op");
+               parent->addChild(temp);
+               assignment_op(temp);
+               string s = tokens[currentTokenIndex + 1].first;
+               if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else if (s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else {
+                   if (s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>") {
+                       temp = new ParseTreeNode("boolean_expr");
+                       parent->addChild(temp);
+                       arithmetic_expr(temp);
+                   }
+                   else {
+                       variable(parent);
+                   }
+               }
+               match(";", parent);
+           }
+
+           void assignment_op(ParseTreeNode* parent) {
+               // Assignment_op -> '='| '+=' | '-=' | '*=' | '/=' | '%='| '&='| '|='| '^='| '<<=' | '>>='
+               if (look_ahead.first == "=" || look_ahead.first == "+=" || look_ahead.first == "-=" || look_ahead.first == "*=" || look_ahead.first == "/=" || look_ahead.first == "%=" || look_ahead.first == "&=" || look_ahead.first == "|=" || look_ahead.first == "^=" || look_ahead.first == "<<=" || look_ahead.first == ">>=") {
+                   try {
+                       match(look_ahead.first, parent);
+                   }
+                   catch (exception e) {
+                       cout << e.what() << endl;
+                   }
+               }
+           }
+
+           void variable(ParseTreeNode* parent) {
+               // Variable -> number | id
+               if (look_ahead.first == "number") {
+                   try {
+                       match("number", parent);
+                   }
+                   catch (exception e) {
+                       cout << e.what() << endl;
+                   }
+               }
+               else if (look_ahead.first == "id") {
+                   try {
+                       match("id", parent);
+                   }
+                   catch (exception e) {
+                       cout << e.what() << endl;
+                   }
+               }
+           }
+
+           void function_call(ParseTreeNode* parent) {
+               // function_call -> id ( arguments ) ;
+               if (look_ahead.first == "id") {
+                   try {
+                       match("id", parent);
+                       match("(", parent);
+                       temp = new ParseTreeNode("arguments");
+                       parent->addChild(temp);
+                       arguments(temp);
+                       match(")", parent);
+                       match(";", parent);
+                   }
+                   catch (exception e) {
+                       cout << e.what() << endl;
+                   }
+               }
+           }
+
+           void arguments(ParseTreeNode* parent) {
+               // arguments -> arg_expression | arg_expression , arguments | ε
+               if (look_ahead.first == "id" || look_ahead.first == "number" || look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+                   temp = new ParseTreeNode("arg_expression");
+                   parent->addChild(temp);
+                   arg_expression(temp);
+                   if (look_ahead.first == ",") {
+                       match(",", parent);
+                       temp = new ParseTreeNode("arguments");
+                       parent->addChild(temp);
+                       arguments(temp);
+                   }
+               }
+               else {
+                   return;
+               }
+           }
+
+           void arg_expression(ParseTreeNode* parent) {
+               // arg_expression -> arithmetic_expr | boolean_expr
+               string s = tokens[currentTokenIndex + 1].first;
+               if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else if (s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else if (s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   arithmetic_expr(temp);
+               }
+               else {
+                   variable(parent);
+               }
+           }
+
+           void return_statement(ParseTreeNode* parent) {
+               // return_statement  -> return return_expr ;
+               match("return", parent);
+               temp = new ParseTreeNode("return_expr");
+               parent->addChild(temp);
+               return_expr(temp);
+               match(";", temp);
+           }
+
+           void return_expr(ParseTreeNode* parent) {
+               // return_expr -> arithmetic_expr | boolean_expr | 1 | 0 | ε
+               string s = tokens[currentTokenIndex + 1].first;
+               if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else if (s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else if (s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   arithmetic_expr(temp);
+               }
+               else if (look_ahead.first == "1" || look_ahead.first == "0") {
+                   match(look_ahead.first, parent);
+               }
+               else {
+                   variable(parent);
+               }
+           }
+
+           void conditional_statements(ParseTreeNode* parent) {
+               // conditional_statements -> if_expr | switch_expr
+               if (look_ahead.first == "if") {
+                   temp = new ParseTreeNode("if_expr");
+                   parent->addChild(temp);
+                   if_expr(temp);
+               }
+               else if (look_ahead.first == "switch") {
+                   temp = new ParseTreeNode("switch_expr");
+                   parent->addChild(temp);
+                   switch_expr(temp);
+               }
+           }
+
+           void body(ParseTreeNode* parent) {
+               //body -> single_statement sub_body
+               temp = new ParseTreeNode("single_statement");
+               parent->addChild(temp);
+               single_statement(temp);
+               temp = new ParseTreeNode("sub_body");
+               parent->addChild(temp);
+               sub_body(temp);
+           }
+
+           void sub_body(ParseTreeNode* parent) {
+               // sub_body -> body | ε
+               //int | float | double | char | string | long | short | signed | unsigned
+               if (look_ahead.first == "if" || look_ahead.first == "while" || look_ahead.first == "for" || look_ahead.first == "switch" || look_ahead.first == "return" || look_ahead.first == "id" || look_ahead.first == "do" || look_ahead.first == "enum" || look_ahead.first == "struct" || look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned") {
+                   temp = new ParseTreeNode("body");
+                   parent->addChild(temp);
+                   body(temp);
+               }
+           }
+
+           void if_expr(ParseTreeNode* parent) {
+               // if_expr -> if (boolean_expr) {body} else_expr | if (boolean_expr) single_statement else_expr
+               match("if", parent);
+               match("(", parent);
+               string s = tokens[currentTokenIndex + 1].first;
+               if (look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else if (s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||") {
+                   temp = new ParseTreeNode("boolean_expr");
+                   parent->addChild(temp);
+                   boolean_expr(temp);
+               }
+               else {
+                   variable(parent);
+               }
+               match(")", parent);
+               if (look_ahead.first == "{") {
+                   match("{", parent);
+                   temp = new ParseTreeNode("body");
+                   parent->addChild(temp);
+                   body(temp);
+                   match("}", parent);
+               }
+               else {
+                   temp = new ParseTreeNode("single_statement");
+                   parent->addChild(temp);
+                   single_statement(temp);
+               }
+               temp = new ParseTreeNode("else_expr");
+               parent->addChild(temp);
+               else_expr(temp);
+           }
+
+           void else_expr(ParseTreeNode* parent) {
+               // else_expr -> else {body} | else single_statement | ε
+               if (look_ahead.first == "else") {
+                   match("else", parent);
+                   if (look_ahead.first == "{") {
+                       match("{", parent);
+                       temp = new ParseTreeNode("body");
+                       parent->addChild(temp);
+                       body(temp);
+                       match("}", parent);
+                   }
+                   else {
+                       temp = new ParseTreeNode("single_statement");
+                       parent->addChild(temp);
+                       single_statement(temp);
+                   }
+               }
+           }
+
+           void switch_expr(ParseTreeNode* parent) {
+               // switch_expr -> switch(id) { case_expr default_expr }
+               match("switch", parent);
+               match("(", parent);
+               match("id", parent);
+               match(")", parent);
+               match("{", parent);
+               if (look_ahead.first == "case") {
+                   temp = new ParseTreeNode("case_expr");
+                   parent->addChild(temp);
+                   case_expr(temp);
+               }
+               if (look_ahead.first == "default") {
+                   temp = new ParseTreeNode("default_expr");
+                   parent->addChild(temp);
+                   default_expr(temp);
+               }
+               match("}", parent);
+           }
+
+           void case_expr(ParseTreeNode* parent) {
+               // case_expr -> case const : body break; | case const : body | case_expr | ε
+               while (look_ahead.first == "case") {
+                   match("case", parent);
+                   temp = new ParseTreeNode("const_expr");
+                   parent->addChild(temp);
+                   const_expr(temp);
+                   match(":", parent);
+                   temp = new ParseTreeNode("body");
+                   parent->addChild(temp);
+                   body(temp);
+                   if (look_ahead.first == "break") {
+                       match("break", parent);
+                       match(";", parent);
+                   }
+               }
+           }
+
+           void default_expr(ParseTreeNode* parent) {
+               // default_expr -> default: body | default: body break;
+               if (look_ahead.first == "default") {
+                   match("default", parent);
+                   match(":", parent);
+                   temp = new ParseTreeNode("body");
+                   parent->addChild(temp);
+                   body(temp);
+                   if (look_ahead.first == "break") {
+                       match("break", parent);
+                       match(";", parent);
+                   }
+               }
+           }
+
+           void const_expr(ParseTreeNode* parent) {
+               // const -> number | string | char
+               if (look_ahead.first == "number" || look_ahead.second == "string" || look_ahead.second == "char") {
+                   match(look_ahead.first, parent);
+               }
+               else {
+                   throw std::runtime_error("Unexpected token in const_expr: " + look_ahead.first);
+               }
+           }
+
+           void variable_declaration(ParseTreeNode* parent) {
+               // variable_declaration -> data_type variable_list ;
+               ParseTreeNode* temp = new ParseTreeNode("data_type");
+               parent->addChild(temp);
+               data_type(temp);
+
+               temp = new ParseTreeNode("variable_list");
+               parent->addChild(temp);
+               variable_list(temp);
+
+               match(";", parent);
+           }
+
+           void data_type(ParseTreeNode* parent) {
+               // data_type -> type_modifier type
+               ParseTreeNode* temp = new ParseTreeNode("type_modifier");
+               parent->addChild(temp);
+               type_modifier(temp);
+
+               temp = new ParseTreeNode("type");
+               parent->addChild(temp);
+               type(temp);
+           }
+
+           void type(ParseTreeNode* parent) {
+               // type -> int | float | double | char | string | long | short | signed | unsigned
+               if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" ||
+                   look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" ||
+                   look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned") {
+                   match(look_ahead.first, parent);
+               }
+               else {
+                   throw std::runtime_error("Unexpected token in type: " + look_ahead.first);
+               }
+           }
+
+           void type_modifier(ParseTreeNode* parent) {
+               // type_modifier -> const | volatile | restrict | ε
+               if (look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
+                   match(look_ahead.first, parent);
+               }
+           }
+
+           void variable_list(ParseTreeNode* parent) {
+               // variable_list -> id equal_assign | id equal_assign, variable_list
+               match("id", parent);
+               temp = new ParseTreeNode("equal_assign");
+               parent->addChild(temp);
+               equal_assign(temp);
+               if (look_ahead.first == ",") {
+                   match(",", parent);
+                   temp = new ParseTreeNode("variable_list");
+                   parent->addChild(temp);
+                   variable_list(temp);
+               }
+           }
+
+           void equal_assign(ParseTreeNode* parent) {
+               // equal_assign -> = const | = id | ε
+               if (look_ahead.first == "=") {
+                   match("=", parent);
+                   if (look_ahead.first == "number" || look_ahead.second == "string" || look_ahead.second == "char") {
+                       temp = new ParseTreeNode("const_expr");
+                       parent->addChild(temp);
+                       const_expr(temp);
+                   }
+                   else {
+                       match("id", parent);
+                   }
+               }
+           }
+
 private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e) {
     // Extract preprocessors, remove comments, and extra spaces
     string preprocessors = extractPreprocessors(msclr::interop::marshal_as<std::string>(textBox1->Text));
@@ -449,7 +1039,7 @@ private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e
     string cleanCode = removeExtraSpaces(codeWithoutComments);
 
     // Analyze code and display the result
-    vector<pair<string, string>> tokens = analyzeCode(cleanCode);
+    vector<pair<string, string>> token = analyzeCode(cleanCode);
     String^ result = gcnew String("Lexeme\t\tToken\n");
     auto lexIt = lexemes.begin();
     for (const auto& token : tokens) {
@@ -487,6 +1077,10 @@ private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e
 
     // Display the symbol table in a separate form
     printSymbolTable(symbolTableVector);
+    tokens = token;
+    currentTokenIndex = 0;
+    look_ahead = tokens[currentTokenIndex];
+    parse();
 }
 
        void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
