@@ -42,10 +42,16 @@ public:
     }
 
     void single_statement(ParseTreeNode *parent) {
-        if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned" || look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
-            temp = new ParseTreeNode("variable_declaration");
-            parent->addChild(temp);
-            variable_declaration(temp);
+        if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned" || look_ahead.first == "void" || look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
+            if(look_ahead.first == "void" || tokens[currentTokenIndex + 2].first == "(" || tokens[currentTokenIndex + 3].first == "("){
+                temp = new ParseTreeNode("function_definition");
+                parent->addChild(temp);
+                function_definition(temp);
+            } else {
+                temp = new ParseTreeNode("variable_declaration");
+                parent->addChild(temp);
+                variable_declaration(temp);
+            }
         } else if (look_ahead.first == "if" || look_ahead.first == "switch") {
             temp = new ParseTreeNode("conditional_statement");
             parent->addChild(temp);
@@ -511,6 +517,91 @@ public:
             } else{
                 match("id", parent);
             }
+        }
+    }
+
+    void function_definition(ParseTreeNode *parent) {
+        // function_definition -> function_header { body }
+        temp = new ParseTreeNode("function_header");
+        parent->addChild(temp);
+        function_header(temp);
+
+        match("{", parent);
+        temp = new ParseTreeNode("body");
+        parent->addChild(temp);
+        body(temp);
+        match("}", parent);
+    }
+
+    void function_header(ParseTreeNode *parent) {
+        // function_header -> function_datatype id ( parameter_list )
+        temp = new ParseTreeNode("function_datatype");
+        parent->addChild(temp);
+        function_datatype(temp);
+
+        match("id", parent);
+        match("(", parent);
+
+        temp = new ParseTreeNode("parameter_list");
+        parent->addChild(temp);
+        parameter_list(temp);
+
+        match(")", parent);
+    }
+
+    void function_datatype(ParseTreeNode *parent) {
+        // function_datatype -> data_type | void
+        if (look_ahead.first == "void") {
+            match("void", parent);
+        } else {
+            temp = new ParseTreeNode("data_type");
+            parent->addChild(temp);
+            data_type(temp);
+        }
+    }
+
+    void parameter_list(ParseTreeNode *parent) {
+        // parameter_list -> parameter sub_parameter_list
+        if(look_ahead.first == ")"){
+            return;
+        }
+        temp = new ParseTreeNode("parameter");
+        parent->addChild(temp);
+        parameter(temp);
+
+        if(look_ahead.first == ")"){
+            return;
+        }
+
+        temp = new ParseTreeNode("sub_parameter_list");
+        parent->addChild(temp);
+        sub_parameter_list(temp);
+    }
+
+    void sub_parameter_list(ParseTreeNode *parent) {
+        // sub_parameter_list -> , parameter sub_parameter_list | ε
+        if (look_ahead.first == ",") {
+            match(",", parent);
+            temp = new ParseTreeNode("parameter");
+            parent->addChild(temp);
+            parameter(temp);
+
+            temp = new ParseTreeNode("sub_parameter_list");
+            parent->addChild(temp);
+            sub_parameter_list(temp);
+        }
+    }
+
+    void parameter(ParseTreeNode *parent) {
+        // parameter -> data_type id | ε
+        if(look_ahead.first == ")"){
+            return;
+        } else{
+            temp = new ParseTreeNode("data_type");
+            parent->addChild(temp);
+            data_type(temp);
+
+            match("id", parent);
         }
     }
 
