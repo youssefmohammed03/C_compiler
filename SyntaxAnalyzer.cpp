@@ -15,6 +15,7 @@ int currentTokenIndex;
 pair<string, string> look_ahead;
 ParseTreeNode *root;
 ParseTreeNode *temp;
+bool isError = false;
 
 public:
     SyntaxAnalyzer(vector<pair<string, string>> tokens) {
@@ -34,6 +35,7 @@ public:
     void match(string expectedToken, ParseTreeNode *parent) {
         if (look_ahead.first == expectedToken) {
             temp = new ParseTreeNode(expectedToken);
+            temp->isTerminal = true;
             parent->addChild(temp);
             look_ahead = getNextToken();
         } else{
@@ -83,6 +85,22 @@ public:
         }
     }
 
+    void parse() {
+        root = new ParseTreeNode("main");
+        while (currentTokenIndex < tokens.size()) {
+            if(this->isError){
+                cout << "Parsing failed" << endl;
+                return;
+            }
+            if(look_ahead.first == "Success" && look_ahead.second == "Tokens are finished"){
+                cout << "Parsing completed successfully" << endl;
+                root->printTree();
+                return;
+            }
+            program(root);
+        }
+    }
+
     void program(ParseTreeNode *parent){
         //program -> declarations function_definitions
         temp = new ParseTreeNode("declarations");
@@ -94,17 +112,6 @@ public:
         function_definitions(temp);
     }
 
-    void parse() {
-        root = new ParseTreeNode("main");
-        while (currentTokenIndex < tokens.size()) {
-            if(look_ahead.first == "Success" && look_ahead.second == "Tokens are finished"){
-                cout << "Parsing completed successfully" << endl;
-                root->printTree();
-                return;
-            }
-            program(root);
-        }
-    }
 
     void function_definitions(ParseTreeNode *parent) {
         // function_definitions -> function_definition function_definitions | ε
@@ -122,6 +129,18 @@ public:
 
     void declarations(ParseTreeNode *parent) {
         // enum_declaration | structure_declaration | array_declaration | pointer_declaration | variable_declaration | ε
+        if(look_ahead.first == "enum"){
+            temp = new ParseTreeNode("enum_declaration");
+            parent->addChild(temp);
+            enum_declaration(temp);
+            return;
+        }
+        if(look_ahead.first == "struct"){
+            temp = new ParseTreeNode("structure_declaration");
+            parent->addChild(temp);
+            structure_declaration(temp);
+            return;
+        }
         if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned" || look_ahead.first == "void" || look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
             if(look_ahead.first == "void" || tokens[currentTokenIndex + 2].first == "(" || tokens[currentTokenIndex + 3].first == "("){
                 return;
@@ -188,6 +207,7 @@ public:
                 match(look_ahead.first, parent);
             } catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
             }
         }
     }
@@ -215,6 +235,8 @@ public:
                 match(look_ahead.first, parent);
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         }
     }
@@ -247,6 +269,7 @@ public:
             match(";", parent);
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
             }
     }
 
@@ -257,6 +280,8 @@ public:
                 match(look_ahead.first, parent);
             } catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         }
     }
@@ -268,12 +293,16 @@ public:
                 match("number", parent);
             } catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         } else if (look_ahead.first == "id") {
             try{
                 match("id", parent);
             } catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         }
     }
@@ -291,6 +320,8 @@ public:
                 match(";", parent);
             } catch (exception& e) {
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         }
     }
@@ -306,6 +337,8 @@ public:
                     match(",", parent);
                 }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
                 }
                 temp = new ParseTreeNode("arguments");
                 parent->addChild(temp);
@@ -346,6 +379,8 @@ public:
             match(";", temp);
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
     }
 
@@ -369,6 +404,8 @@ public:
                 match(look_ahead.first, parent);
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         } else{
             variable(parent);
@@ -415,6 +452,8 @@ public:
             single_statement(temp);
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
         }
         temp = new ParseTreeNode("sub_body");
         parent->addChild(temp);
@@ -544,6 +583,8 @@ public:
                     single_statement(temp);
                 }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
                 }
             }
             temp = new ParseTreeNode("else_expr");
@@ -551,6 +592,8 @@ public:
             else_expr(temp);
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
     }
 
@@ -572,11 +615,15 @@ public:
                         single_statement(temp);
                     }catch (exception& e){
                         cout << e.what() << endl;
+                this->isError = true;
+
                     }
                 }
             }
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
     }
 
@@ -601,6 +648,8 @@ public:
             match("}", parent);
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
         }
     }
 
@@ -615,6 +664,8 @@ public:
                     const_expr(temp);
                 }catch (exception& e){
                     cout << e.what() << endl;
+                this->isError = true;
+
                 }
                 match(":", parent);
                 temp = new ParseTreeNode("body");
@@ -626,6 +677,8 @@ public:
                 }
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         }
     }
@@ -645,6 +698,8 @@ public:
                 }
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         }
     }
@@ -656,6 +711,8 @@ public:
                 match(look_ahead.first, parent);
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         } else{
             throw std::runtime_error("Unexpected token in const_expr: " + look_ahead.first);
@@ -675,6 +732,8 @@ public:
             match(";", parent);
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
     }
 
@@ -690,6 +749,8 @@ public:
             type(temp);
         }catch (exception& e){
             cout << e.what() << endl;
+                this->isError = true;
+
         }
     }
 
@@ -702,6 +763,8 @@ public:
                 match(look_ahead.first, parent);
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         } else {
             throw std::runtime_error("Unexpected token in type: " + look_ahead.first);
@@ -715,6 +778,8 @@ public:
                 match(look_ahead.first, parent);
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }    
         }
     }
@@ -734,6 +799,8 @@ public:
             }
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
     }
 
@@ -749,6 +816,8 @@ public:
                         const_expr(temp);
                             }catch (exception& e){
                         cout << e.what() << endl;
+                this->isError = true;
+
                     }
                 } else{
                     match("id", parent);
@@ -756,6 +825,8 @@ public:
             }
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
     }
 
@@ -773,6 +844,8 @@ public:
             match("}", parent);
         }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
     }
 
@@ -793,6 +866,8 @@ public:
             match(")", parent);
         }catch (exception& e){
             cout << e.what() << endl;
+                this->isError = true;
+
         }
     }
 
@@ -803,6 +878,8 @@ public:
                 match("void", parent);
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         } else {
             temp = new ParseTreeNode("data_type");
@@ -843,6 +920,8 @@ public:
                 sub_parameter_list(temp);
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         }
     }
@@ -859,6 +938,8 @@ public:
                 match("id", parent);
             }catch (exception& e){
                 cout << e.what() << endl;
+                this->isError = true;
+
             }
         }
     }
@@ -872,6 +953,8 @@ public:
             match("id", parent);
         }catch (exception& e){
             cout << e.what() << endl;
+                this->isError = true;
+
         }
         temp = new ParseTreeNode("array_dimensions");
         parent->addChild(temp);
@@ -880,17 +963,21 @@ public:
             match(";", parent);
         }catch (exception& e){
             cout << e.what() << endl;
+                this->isError = true;
+
         }
     }
 
     void array_dimensions(ParseTreeNode *parent) {
-        // array_dimensions -> [ number ] | [ number ] array_dimensions
+        // array_dimensions -> [ variable ] | [ variable ] array_dimensions
         try{
             match("[", parent);
-            match("number", parent);
+            variable(parent);
             match("]", parent);
         }catch (exception& e){
             cout << e.what() << endl;
+                this->isError = true;
+
         }
 
         if (look_ahead.first == "[") {
@@ -901,55 +988,165 @@ public:
     }
 
     void pointer_declaration(ParseTreeNode *parent) {
-        // pointer_declaration -> data_type * variable_list_point
+        // pointer_declaration -> data_type variable_list_point ;
+        temp = new ParseTreeNode("data_type");
+        parent->addChild(temp);
+        data_type(temp);
+        temp = new ParseTreeNode("variable_list_point");
+        parent->addChild(temp);
+        variable_list_point(temp);
         try{
-            temp = new ParseTreeNode("data_type");
-            parent->addChild(temp);
-            data_type(temp);
-
-            match("*", parent);
-
-            temp = new ParseTreeNode("variable_list_point");
-            parent->addChild(temp);
-            variable_list_point(temp);
-
             match(";", parent);
-        } catch (exception& e){
+        }catch (exception& e){
             cout << e.what() << endl;
+                this->isError = true;
         }
     }
 
     void variable_list_point(ParseTreeNode *parent) {
-        // variable_list_point -> variable_point | variable_point , variable_list_point
-        temp = new ParseTreeNode("variable_point");
-        parent->addChild(temp);
-        variable_point(temp);
-
-        if (look_ahead.first == ",") {
-            try{
-                match(",", parent);
-            }catch (exception& e){
-                cout << e.what() << endl;
-            }
-            temp = new ParseTreeNode("variable_list_point");
+        // variable_list_point -> *variable_point | *variable_point, variable_list_point
+        try{
+            match("*", parent);
+            temp = new ParseTreeNode("variable_point");
             parent->addChild(temp);
-            variable_list_point(temp);
+            variable_point(temp);
+
+            if (look_ahead.first == ",") {
+                    match(",", parent);
+                temp = new ParseTreeNode("variable_list_point");
+                parent->addChild(temp);
+                variable_list_point(temp);
+            }
+        }catch (exception& e){
+            cout << e.what() << endl;
+                this->isError = true;
         }
     }
 
     void variable_point(ParseTreeNode *parent) {
         // variable_point -> id | id = &id
         try{
+            if (look_ahead.first == "id") {
+                match("id", parent);
+                if (look_ahead.first == "=") {
+                    match("=", parent);
+                    match("&", parent);
+                    match("id", parent);
+                }
+            }
+        }catch (exception& e){
+            cout << e.what() << endl;
+                this->isError = true;
+        }
+    }
+
+    void enum_declaration(ParseTreeNode *parent) {
+        // enum_declaration -> enum id { enum_constants } ;
+        try{
+            match("enum", parent);
+
             match("id", parent);
 
-            if (look_ahead.first == "=") {
-                match("=", parent);
-                match("&", parent);
-                match("id", parent);
-            }
+            match("{", parent);
+
+            temp = new ParseTreeNode("enum_constants");
+            parent->addChild(temp);
+            enum_constants(temp);
+
+            match("}", parent);
+            match(";", parent);
         } catch (exception& e){
             cout << e.what() << endl;
+                this->isError = true;
+
         }
+    }
+
+    void enum_constants(ParseTreeNode *parent) {
+        // enum_constants -> enum_constant | enum_constant , enum_constants
+        temp = new ParseTreeNode("enum_constant");
+        parent->addChild(temp);
+        enum_constant(temp);
+
+        if (look_ahead.first == ",") {
+            try{
+                match(",", parent);
+            } catch (exception& e){
+                cout << e.what() << endl;
+                this->isError = true;
+
+            }
+
+            temp = new ParseTreeNode("enum_constants");
+            parent->addChild(temp);
+            enum_constants(temp);
+        }
+    }
+
+    void enum_constant(ParseTreeNode *parent) {
+        // enum_constant -> id
+        try{
+            match("id", parent);
+        } catch (exception& e){
+            cout << e.what() << endl;
+                this->isError = true;
+
+        }
+    }
+
+    void structure_declaration(ParseTreeNode *parent) {
+        // structure_declaration -> struct id { member_list } ;
+        try{
+            match("struct", parent);
+            match("id", parent);
+            match("{", parent);
+
+            temp = new ParseTreeNode("member_list");
+            parent->addChild(temp);
+            member_list(temp);
+
+            match("}", parent);
+            match(";", parent);
+        }catch (exception& e){
+            cout << e.what() << endl;
+                this->isError = true;
+        }
+    }
+
+    void member_list(ParseTreeNode *parent) {
+        // member_list -> member | member ; member_list | ε
+        if(look_ahead.first == "}") return;
+        temp = new ParseTreeNode("member");
+        parent->addChild(temp);
+        member(temp);
+
+        if (look_ahead.first == ";") {
+            try{
+                match(";", parent);
+            }catch (exception& e){
+                cout << e.what() << endl;
+                    this->isError = true;
+            }
+            temp = new ParseTreeNode("member_list");
+            parent->addChild(temp);
+            member_list(temp);
+        }
+    }
+
+    void member(ParseTreeNode *parent) {
+        // member -> data_type id equal_assign
+        temp = new ParseTreeNode("data_type");
+        parent->addChild(temp);
+        data_type(temp);
+        try{
+            match("id", parent);
+        }catch (exception& e){
+            cout << e.what() << endl;
+                this->isError = true;
+        }
+        temp = new ParseTreeNode("equal_assign");
+        parent->addChild(temp);
+        equal_assign(temp);
     }
 
 };

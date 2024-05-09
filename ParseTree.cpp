@@ -7,6 +7,7 @@ class ParseTreeNode {
 public:
     string type;
     vector<ParseTreeNode*> children;
+    bool isTerminal = false;
 
     ParseTreeNode(string type) : type(type) {}
 
