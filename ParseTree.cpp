@@ -37,9 +37,12 @@ public:
         // Print children
         std::cout << " -> { ";
         for (size_t i = 0; i < children.size(); i++) {
+            if(!children[i]->isTerminal && children[i]->children.empty()){
+                continue;
+            }
             std::cout << children[i]->type;
             if (i != children.size() - 1) {
-                std::cout << ", ";
+                std::cout << " ";
             }
         }
         std::cout << " }";

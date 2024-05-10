@@ -44,9 +44,15 @@ public:
                     if(symbolTableVector[i].second == look_ahead.second){
                         temp->isTerminal = false;
                         temp->addChild(new ParseTreeNode(symbolTableVector[i].first));
+                        temp->children[0]->isTerminal = true;
                         break;
                     }
                 }
+            }
+            if(look_ahead.first == "number"){
+                temp->isTerminal = false;
+                temp->addChild(new ParseTreeNode(look_ahead.second));
+                temp->children[0]->isTerminal = true;
             }
             look_ahead = getNextToken();
         } else{
