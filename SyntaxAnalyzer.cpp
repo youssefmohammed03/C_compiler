@@ -383,7 +383,7 @@ public:
             temp = new ParseTreeNode("return_expr");
             parent->addChild(temp);
             return_expr(temp);
-            match(";", temp);
+            match(";", parent);
         }catch (exception& e){
                 cout << e.what() << endl;
                 this->isError = true;
