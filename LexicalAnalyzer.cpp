@@ -263,9 +263,8 @@ void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
 int main() {
     string code = R"(
         int main(){
-        while (a) {
-            int b = 5;
-        }}
+            int a = 5 + 5 * df;
+        }
     )";
 
 

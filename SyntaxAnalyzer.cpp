@@ -253,28 +253,18 @@ public:
     }
 
     void assignment_expr(ParseTreeNode *parent) {
-        // assignment_expr -> variable assignment_op variable | variable assignment_op arithmetic_expr | variable assignment_op boolean_expr
+        // assignment_expr -> variable assignment_op variable | variable assignment_op arithmetic_expr
         variable(parent);
         temp = new ParseTreeNode("assignment_op");
         parent->addChild(temp);
         assignment_op(temp);
         string s = tokens[currentTokenIndex + 1].first;
-        if(look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||"){
+        if(s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>"){
             temp = new ParseTreeNode("boolean_expr");
             parent->addChild(temp);
-            boolean_expr(temp);
-        } else if(s == "==" || s == "!=" || s == ">" || s == "<" || s == ">=" || s == "<=" || s == "!" || s == "&&" || s == "||"){
-            temp = new ParseTreeNode("boolean_expr");
-            parent->addChild(temp);
-            boolean_expr(temp);
+            arithmetic_expr(temp);
         } else{
-            if(s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>"){
-                temp = new ParseTreeNode("boolean_expr");
-                parent->addChild(temp);
-                arithmetic_expr(temp);
-            } else{
-                variable(parent);
-            }
+            variable(parent);
         }
         try{
             match(";", parent);
@@ -807,7 +797,7 @@ public:
 
     void data_type(ParseTreeNode *parent) {
         // data_type -> type_modifier type
-        ParseTreeNode* temp = new ParseTreeNode("type_modifier");
+        temp = new ParseTreeNode("type_modifier");
         parent->addChild(temp);
         type_modifier(temp);
 
@@ -825,8 +815,7 @@ public:
     void type(ParseTreeNode *parent) {
         // type -> int | float | double | char | string | long | short | signed | unsigned
         if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" ||
-            look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" ||
-            look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned") {
+            look_ahead.first == "char" || look_ahead.first == "string") {
             try{
                 match(look_ahead.first, parent);
             }catch (exception& e){
@@ -841,7 +830,8 @@ public:
 
     void type_modifier(ParseTreeNode *parent) {
         // type_modifier -> const | volatile | restrict | ε
-        if (look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
+        if (look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict" || look_ahead.first == "long" ||
+            look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned") {
             try{
                 match(look_ahead.first, parent);
             }catch (exception& e){
@@ -873,20 +863,19 @@ public:
     }
 
     void equal_assign(ParseTreeNode *parent) {
-        // equal_assign -> = const | = id | ε
+        // equal_assign -> = const | = id | = arithmetic_expr |ε
         try{
             if (look_ahead.first == "=") {
                 match("=" , parent);
-                if(look_ahead.first == "number" || look_ahead.second == "string" || look_ahead.second == "char"){
+                string s = tokens[currentTokenIndex + 1].first;
+                if(s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>"){
+                    temp = new ParseTreeNode("arithmetic_expr");
+                    parent->addChild(temp);
+                    arithmetic_expr(temp);
+                } else if(look_ahead.first == "number" || look_ahead.second == "string" || look_ahead.second == "char"){
                     temp = new ParseTreeNode("const_expr");
                     parent->addChild(temp);
-                    try{
-                        const_expr(temp);
-                            }catch (exception& e){
-                        cout << e.what() << endl;
-                this->isError = true;
-
-                    }
+                    const_expr(temp);
                 } else{
                     match("id", parent);
                 }
