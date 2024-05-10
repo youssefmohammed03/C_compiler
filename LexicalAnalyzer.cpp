@@ -263,7 +263,7 @@ void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
 int main() {
     string code = R"(
         int main(){
-            return 0 ;
+            return 5 ;
         }
     )";
 
