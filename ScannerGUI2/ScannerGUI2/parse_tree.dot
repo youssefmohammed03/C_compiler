@@ -1,0 +1,17 @@
+digraph ParseTree {
+  "main" -> {"declarations", "function_definitions"}
+    "declarations" -> {"variable_declaration"}
+      "variable_declaration" -> {"data_type", "variable_list", ";"}
+        "data_type" -> {"type_modifier", "type"}
+          "type_modifier"
+          "type" -> {"int"}
+            "int"
+        "variable_list" -> {"id", "equal_assign"}
+          "id"
+          "equal_assign" -> {"=", "const_expr"}
+            "="
+            "const_expr" -> {"number"}
+              "number"
+        ";"
+    "function_definitions"
+}
