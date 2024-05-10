@@ -278,13 +278,13 @@ int main() {
 
     printTokens(tokens);
 
-    //printSymbolTable(symbolTableVector);
+    printSymbolTable(symbolTableVector);
 
     //printErrors();
 
     //printLexemes();
 
-    SyntaxAnalyzer syntaxAnalyzer(tokens);
+    SyntaxAnalyzer syntaxAnalyzer(tokens, symbolTableVector);
 
     syntaxAnalyzer.parse();
 

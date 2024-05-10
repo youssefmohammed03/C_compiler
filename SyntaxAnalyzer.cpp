@@ -16,12 +16,14 @@ pair<string, string> look_ahead;
 ParseTreeNode *root;
 ParseTreeNode *temp;
 bool isError = false;
+vector<pair<string, string>> symbolTableVector;
 
 public:
-    SyntaxAnalyzer(vector<pair<string, string>> tokens) {
+    SyntaxAnalyzer(vector<pair<string, string>> tokens, vector<pair<string, string>> symbolTableVector) {
         this->tokens = tokens;
         this->currentTokenIndex = 0;
         this->look_ahead = tokens[currentTokenIndex];
+        this->symbolTableVector = symbolTableVector;
     }
 
     pair<string, string> getNextToken() {
@@ -37,6 +39,15 @@ public:
             temp = new ParseTreeNode(expectedToken);
             temp->isTerminal = true;
             parent->addChild(temp);
+            if(look_ahead.first == "id"){
+                for(int i = 0; i < symbolTableVector.size(); i++){
+                    if(symbolTableVector[i].second == look_ahead.second){
+                        temp->isTerminal = false;
+                        temp->addChild(new ParseTreeNode(symbolTableVector[i].first));
+                        break;
+                    }
+                }
+            }
             look_ahead = getNextToken();
         } else{
             throw std::runtime_error("Unexpected token: " + look_ahead.first + ". Expected: " + expectedToken);
@@ -86,7 +97,7 @@ public:
     }
 
     void parse() {
-        root = new ParseTreeNode("main");
+        root = new ParseTreeNode("program");
         while (currentTokenIndex < tokens.size()) {
             if(this->isError){
                 cout << "Parsing failed" << endl;
