@@ -421,7 +421,7 @@ public:
                 this->isError = true;
 
             }
-        } else{
+        } else if(look_ahead.first == "id" || look_ahead.first == "number"){
             variable(parent);
         }
     }
