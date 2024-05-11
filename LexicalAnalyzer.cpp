@@ -262,8 +262,16 @@ void printSymbolTable(const vector<pair<string, string>>& symbolTable) {
 
 int main() {
     string code = R"(
-        int main(){
-            return 5 ;
+        #include <stdio.h>
+
+        int main() {
+            int a = 5;
+            int b = 10;
+            int sum = a + b;
+
+            printf("The sum of a and b is: %d\n", sum);
+
+            return 0;
         }
     )";
 

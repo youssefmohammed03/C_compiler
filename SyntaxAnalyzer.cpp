@@ -335,7 +335,7 @@ public:
 
     void arguments(ParseTreeNode *parent) {
         // arguments -> arg_expression | arg_expression , arguments | ε
-        if (look_ahead.first == "id" || look_ahead.first == "number" || look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
+        if (look_ahead.first == "id" || look_ahead.first == "number" || look_ahead.second == "string" || look_ahead.first == "==" || look_ahead.first == "!=" || look_ahead.first == ">" || look_ahead.first == "<" || look_ahead.first == ">=" || look_ahead.first == "<=" || look_ahead.first == "!" || look_ahead.first == "&&" || look_ahead.first == "||") {
             temp = new ParseTreeNode("arg_expression");
             parent->addChild(temp);
             arg_expression(temp);
@@ -371,6 +371,13 @@ public:
             temp = new ParseTreeNode("boolean_expr");
             parent->addChild(temp);
             arithmetic_expr(temp);
+        } else if(look_ahead.second == "string"){
+            try{
+                match(look_ahead.first, parent);
+            } catch (exception& e){
+                cout << e.what() << endl;
+                this->isError = true;
+            }
         } else{
             variable(parent);
         }
