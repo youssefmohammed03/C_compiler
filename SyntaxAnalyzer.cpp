@@ -61,6 +61,7 @@ public:
     }
 
     void single_statement(ParseTreeNode *parent) {
+        // single_statement -> expression | conditional_statements | iterative_statements | function_calls | return_statement | variable_declaration | array_declaration | pointer_declaration
         if (look_ahead.first == "int" || look_ahead.first == "float" || look_ahead.first == "double" || look_ahead.first == "char" || look_ahead.first == "string" || look_ahead.first == "long" || look_ahead.first == "short" || look_ahead.first == "signed" || look_ahead.first == "unsigned" || look_ahead.first == "void" || look_ahead.first == "const" || look_ahead.first == "volatile" || look_ahead.first == "restrict") {
                 if(tokens[currentTokenIndex + 2].first == "[" || tokens[currentTokenIndex + 3].first == "["){
                     temp = new ParseTreeNode("array_declaration");
@@ -266,7 +267,7 @@ public:
         assignment_op(temp);
         string s = tokens[currentTokenIndex + 1].first;
         if(s == "+" || s == "-" || s == "*" || s == "/" || s == "%" || s == "&" || s == "|" || s == "^" || s == "<<" || s == ">>"){
-            temp = new ParseTreeNode("boolean_expr");
+            temp = new ParseTreeNode("arithmetic_expr");
             parent->addChild(temp);
             arithmetic_expr(temp);
         } else{
